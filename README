@@ -1,10 +1,12 @@
 Cacca_bot: bot telegram che aggiunge le cacche al google fogli.
 
 Da implementare:
-- Sistemare la funzione che inserisce le cacche (la data e l'ora sono strane e non funzionano per qualche motivo)
+- Inserire funzione per il fuso orario delle persone
+- Inserire sicurezza, ovvero fare in modo che il bot funzioni solo nel gruppo e con gli admin
 - Inserire funzione che visualizza le ultime cacche
 - Inserire funzione per togliere l'ultima propria cacca inserita
 - Inserire funzione per vedere la classifica
+- Capire quali sono i requirements
 - Deployare il bot su un qualche servizio in modo che giri sempre
 
 Setup:
