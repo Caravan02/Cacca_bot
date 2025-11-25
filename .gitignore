@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# Credentials
+credentials/
+*.json
+*.p12
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Logs
+logs/
+*.log
