@@ -10,6 +10,7 @@ Setup:
   $ python3 -m venv venv  # Crea venv per python
 - $ pip install -r requirements.txt  # Installa i pacchetti richiesti
 - $ sqlite3 cagatori.db  # Crea il database
-- sqlite> CREATE TABLE cagatori(user_id int NOT NULL, nome varchar(100) NOT NULL UNIQUE, fuso_orario int NOT NULL, PRIMARY KEY (user_id));  -- Crea la tabella con i cagatori
+- sqlite> CREATE TABLE cagatori(user_id int NOT NULL, nome varchar(100) NOT NULL UNIQUE, fuso_orario int NOT NULL, admin bool NOT NULL DEFAULT 0, PRIMARY KEY (user_id))  -- Crea la tabella con i cagatori
+- sqlite> INSERT INTO cagatori values (<user_id>, <nome>, <fuso_orario>, 1)  -- Aggiungi il primo cagatore come admin 
 - sqlite> .quit  -- Esce da sqlite3
 - $ python3 bot.py  # runna il bot

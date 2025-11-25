@@ -7,20 +7,12 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from dotenv import load_dotenv
 import re
 import json
-from datetime import timedelta
+from datetime import timedelta 
 import sqlite3
 
 conn = sqlite3.connect('cagatori.db')
 cursor = conn.cursor()
-
-# Davvero con tutti i pacchetti di figa che ha python questa funzione non c'è?
-
-def is_integer(s):
-    if s[0] in ('-', '+'):
-        return s[1:].isdigit()
-    return s.isdigit()
-
-# import cagatori # file con i membri del gruppo
+# CREATE TABLE cagatori(user_id int NOT NULL, nome varchar(100) NOT NULL UNIQUE, fuso_orario int NOT NULL, admin bool NOT NULL DEFAULT 0, PRIMARY KEY (user_id))
 
 # Load environment variables from .env file
 load_dotenv()
@@ -30,11 +22,11 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 GOOGLE_SHEETS_CREDENTIALS_FILE = os.getenv('GOOGLE_SHEETS_CREDENTIALS_FILE')
 SPREADSHEET_NAME = os.getenv('SPREADSHEET_NAME')
 WORKSHEET_NAME = os.getenv('WORKSHEET_NAME')
-ADMINS_USER_ID = json.loads(os.getenv('ADMINS_USER_ID'))
+# ADMINS_USER_ID = json.loads(os.getenv('ADMINS_USER_ID'))
 ALLOWED_GROUPS = json.loads(os.getenv('ALLOWED_GROUPS'))
 
 # Validate required environment variables
-required_vars = ['TELEGRAM_BOT_TOKEN', 'GOOGLE_SHEETS_CREDENTIALS_FILE', 'SPREADSHEET_NAME', 'WORKSHEET_NAME', 'ADMINS_USER_ID', 'ALLOWED_GROUPS']
+required_vars = ['TELEGRAM_BOT_TOKEN', 'GOOGLE_SHEETS_CREDENTIALS_FILE', 'SPREADSHEET_NAME', 'WORKSHEET_NAME', 'ALLOWED_GROUPS']
 missing_vars = [var for var in required_vars if not os.getenv(var)]
 if missing_vars:
     raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
@@ -45,6 +37,22 @@ LoggingCazzi.setup_logging()
 # Initialize Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_NAME)
 
+# Funzione per vedere chi è andmin
+def is_admin(user_id):
+    cursor.execute("select admin from cagatori where user_id=?", (user_id,))
+    ans=cursor.fetchone()
+    if (ans and ans[0]):
+        return True
+    else:
+        return False
+
+# Davvero con tutti i pacchetti di figa che ha python questa funzione non c'è?
+
+def is_integer(s):
+    if s[0] in ('-', '+'):
+        return s[1:].isdigit()
+    return s.isdigit()
+
 # Comandi Bot
 
 # /start
@@ -52,7 +60,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/start (attualmente non operativo)."""
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if (chat_id in ALLOWED_GROUPS) or is_admin(user_id):
         LoggingCazzi.log_user_activity(update, "START_COMMAND")
     
 
@@ -61,7 +69,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gestione dei messaggi"""
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if (chat_id in ALLOWED_GROUPS) or is_admin(user_id):
         try:
             user_message = update.message.text
             user_id = update.message.from_user.id
@@ -73,7 +81,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
                 try:
-                    cursor.execute("select nome, fuso_orario from cagatori where user_id=  ?", (user_id,))
+                    cursor.execute("select nome, fuso_orario from cagatori where user_id=?", (user_id,))
                     dati=cursor.fetchone()
                     # if (cagatori.cagatori[user_id]):
                     #     chi=cagatori.cagatori[user_id]
@@ -94,6 +102,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         else:
                             giorno = update.message.date.date().strftime('%d/%m/%y')
                     else:
+
                         # user_tz = pytz.timezone(update.message.from_user.timezone)
                         data=update.message.date + timedelta(hours=dati[1])
                         giorno=data.date().strftime('%d/%m/%y')
@@ -177,23 +186,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manda un messaggio di aiuto"""
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if (chat_id in ALLOWED_GROUPS) or is_admin(user_id):
         LoggingCazzi.log_user_activity(update, "HELP_COMMAND")
-
-
-
         await update.message.reply_text("""
-    Lista dei comandi:
+Lista dei comandi:
 
-    /help - Visualizza questo messaggio
-    /sintassi - Visualizza sintassi dei messaggi di cacca
-    /aggiungi - Aggiungi cagatore
-    /join - Diventa un cagatore
-    /rimuovi - Rimuovi cagatore
-    /abbandona - Smetti di essere un cagatore
-    /setfuso - Aggiorna il tuo fuso orario
-    /cagatori - Lista tutti i cagatori
-
+/help - Visualizza questo messaggio
+/sintassi - Visualizza sintassi dei messaggi di cacca
+/aggiungi - Aggiungi cagatore (admin only)
+/join - Diventa un cagatore
+/rimuovi - Rimuovi cagatore (admin only)
+/abbandona - Smetti di essere un cagatore
+/setfuso - Aggiorna il tuo fuso orario
+/cagatori - Lista tutti i cagatori
+/addadmin - Nomina admin (admin only)
+/rmadmin - Rimuovi admin (admin only)
     """)
         logging.info("Messaggio di aiuto mandato")
 
@@ -202,30 +209,28 @@ async def sintassi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Mostra sintassi per i messaggi di cacca"""
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if (chat_id in ALLOWED_GROUPS) or is_admin(user_id):
         LoggingCazzi.log_user_activity(update, "SINTASSI_COMMAND")
         await update.message.reply_text("""
-    Sintassi per i messaggi di cacca:
-    · Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
-    · Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "Keyword: valore".
-    Le keyword accettate sono: Giorno, Ora, Città, Provincia, Regione, Stato, Altitudine, Velocità, e le coppie "Keyword: valore" devono essere separate da "," ";" o "\n" (a capo).
-    Occhio alle maiuscole! Le keyword non riconosciute saranno ignorate.
-    Esempio:
-    "💩
-    Ora: 04:20
-    Città: Sale Marasino
-    Provincia: Brescia
-    Velocità: 1000000000
-    "
+Sintassi per i messaggi di cacca:
+· Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
+· Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "Keyword: valore".
+Le keyword accettate sono: Giorno, Ora, Città, Provincia, Regione, Stato, Altitudine, Velocità, e le coppie "Keyword: valore" devono essere separate da "," ";" o "\n" (a capo).
+Occhio alle maiuscole! Le keyword non riconosciute saranno ignorate.
+Esempio:
+"💩
+Ora: 04:20
+Città: Sale Marasino
+Provincia: Brescia
+Velocità: 1000000000"
     """)
         logging.info("Mandato messaggio con la sintassi")
 
 # /aggiungi - aggiungi nuovo utente, se c'è già dà errore
 async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Aggiungi cagatore"""
-    chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if is_admin(user_id):
         LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND")
 
         # Sintassi /aggiungi <user_id> <nome_sullo_spreadsheet> <fuso_orario UTC>
@@ -238,7 +243,7 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 user_id=(int)(context.args[0])
                 nome=context.args[1]
                 fuso_orario=(int)(context.args[2])
-                cursor.execute("insert into cagatori values (?, ?, ?)", (user_id, nome, fuso_orario))
+                cursor.execute("insert into cagatori values (?, ?, ?, 0)", (user_id, nome, fuso_orario))
                 await update.message.reply_text(f"Aggiunto il cagatore {nome} con user_id {user_id} e fuso orario {fuso_orario}")
                 logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id} e fuso orario {fuso_orario}")
                 conn.commit()
@@ -255,7 +260,7 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Joina la cacca"""
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if (chat_id in ALLOWED_GROUPS) or is_admin(user_id):
         LoggingCazzi.log_user_activity(update, "JOIN_COMMAND")
 
         # Sintassi /join <nome_sullo_spreadsheet> <fuso_orario UTC>
@@ -267,7 +272,7 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 user_id = update.message.from_user.id
                 nome=context.args[0]
                 fuso_orario=(int)(context.args[1])
-                cursor.execute("insert into cagatori values (?, ?, ?)", (user_id, nome, fuso_orario))
+                cursor.execute("insert into cagatori values (?, ?, ?, 0)", (user_id, nome, fuso_orario))
                 await update.message.reply_text(f"Complementi {nome}! Ora sei anche tu un cagatore! Il tuo fuso orario UTC è {fuso_orario}")
                 logging.info(f"Aggiunto cagatore {nome} con user_id {nome} e fuso orario {fuso_orario}")
                 conn.commit()
@@ -281,9 +286,8 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # /rimuovi
 async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Rimuovi cagatore"""
-    chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if is_admin(user_id):
         LoggingCazzi.log_user_activity(update, "RIMUOVI_COMMAND")
 
         # Sintassi: /rimuovi <nome>
@@ -310,7 +314,7 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Abbandona la cacca"""
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if (chat_id in ALLOWED_GROUPS) or is_admin(user_id):
         LoggingCazzi.log_user_activity(update, "ABBANDONA_COMMAND")
 
         # Sintassi: /abbandona
@@ -331,7 +335,8 @@ async def setfuso_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Sintassi: /setfuso <nuovo_fuso UTC> 
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if (chat_id in ALLOWED_GROUPS) or is_admin(user_id):
+        LoggingCazzi.log_user_activity(update, "SETFUSO_COMMAND")
         if(len(context.args)==1 and is_integer(context.args[0])):
             try:
                 user_id = update.message.from_user.id
@@ -352,7 +357,8 @@ async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Visualizza tutti i cagatori"""
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
-    if (chat_id in ALLOWED_GROUPS) or (user_id in ADMINS_USER_ID):
+    if (chat_id in ALLOWED_GROUPS) or is_admin(user_id):
+        LoggingCazzi.log_user_activity(update, "CAGATORI_COMMAND")
         try:
             cursor.execute("select nome from cagatori")
             messaggio = 'Lista cagatori:\n\n'
@@ -368,18 +374,56 @@ async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"Errore.")
             logging.error(f"Errore. {e}")
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Logga errori"""
-    logging.error(f"Exception while handling an update: {context.error}", exc_info=True)
-    # Notify admin user if ADMINS_USER_ID is set
-    for user_id in ADMINS_USER_ID:
-        try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=f"Errore del bot:\n{context.error}"
-            )
-        except Exception as e:
-            logging.error(f"Failed to send error notification to admin: {e}")
+async def addadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Nomina admin"""
+    user_id = update.effective_user.id
+    if is_admin(user_id):
+        LoggingCazzi.log_user_activity(update, "ADDADMIN_COMMAND")
+        if(len(context.args)==1):
+            try:
+                nome=context.args[0]
+                cursor.execute("update table cagatori set admin=1 where nome=?", (nome,))
+                await update.message.reply_text(f"Ora {nome} è un admin")
+                logging.info(f"Ora {nome} è un admin")
+                conn.commit()
+            except sqlite3.Error as e:
+                await update.message.reply_text(f"Errore. Il cagatore {nome} non esiste.")
+                logging.error(f"Errore. {e}")
+        else:
+            await update.message.reply_text("Sintassi: /addadmin <nome>")
+            logging.info("Spiegata la sintassi di /addadmin")
+
+async def rmadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Rimuovi admin"""
+    user_id = update.effective_user.id
+    if is_admin(user_id):
+        LoggingCazzi.log_user_activity(update, "RMADMIN_COMMAND")
+        if(len(context.args)==1):
+            try:
+                nome=context.args[0]
+                cursor.execute("update table cagatori set admin=0 where nome=?", (nome,))
+                await update.message.reply_text(f"Ora {nome} è un admin")
+                logging.info(f"Ora {nome} è un admin")
+                conn.commit()
+            except sqlite3.Error as e:
+                await update.message.reply_text(f"Errore. Il cagatore {nome} non esiste.")
+                logging.error(f"Errore. {e}")
+        else:
+            await update.message.reply_text("Sintassi: /rmadmin <nome>")
+            logging.info("Spiegata la sintassi di /rmadmin")
+
+# async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     """Logga errori"""
+#     logging.error(f"Exception while handling an update: {context.error}", exc_info=True)
+#     curso
+#     for user_id in ADMINS_USER_ID:
+#         try:
+#             await context.bot.send_message(
+#                 chat_id=user_id,
+#                 text=f"Errore del bot:\n{context.error}"
+#             )
+#         except Exception as e:
+#             logging.error(f"Failed to send error notification to admin: {e}")
 
 def main():
     """Fai partire il bot."""
@@ -393,12 +437,14 @@ def main():
 
 # help - Visualizza questo messaggio
 # sintassi - Visualizza sintassi dei messaggi di cacca
-# aggiungi - Aggiungi cagatore
+# aggiungi - Aggiungi cagatore (admin only)
 # join - Diventa un cagatore
-# rimuovi - Rimuovi cagatore
+# rimuovi - Rimuovi cagatore (admin only)
 # abbandona - Smetti di essere un cagatore
 # setfuso - Aggiorna il tuo fuso orario
 # cagatori - Lista tutti i cagatori
+# addadmin - Nomina admin (admin only)
+# rmadmin - Rimuovi admin (admin only)
 
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("sintassi", sintassi_command))
@@ -408,10 +454,12 @@ def main():
         application.add_handler(CommandHandler("abbandona", abbandona_command))
         application.add_handler(CommandHandler("setfuso", setfuso_command))
         application.add_handler(CommandHandler("cagatori", cagatori_command))
+        application.add_handler(CommandHandler("addadmin", addadmin_command))
+        application.add_handler(CommandHandler("rmadmin", rmadmin_command))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
         # Add error handler
-        application.add_error_handler(error_handler)
+        # application.add_error_handler(error_handler)
 
         # Start the Bot
         logging.info("Bot partito...")
