@@ -3,12 +3,25 @@ import logging
 import LoggingCazzi
 import GoogleSheetsCazzi
 from telegram import Update, ReactionTypeEmoji
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 import re
-import pytz
+from datetime import timedelta
+import sqlite3
 
-import cagatori # file con i membri del gruppo
+conn = sqlite3.connect('cagatori.db')
+cursor = conn.cursor()
+
+# Davvero con tutti i pacchetti di figa che ha python questa funzione non c'è?
+
+def is_integer(string):
+    try:
+        int(string)
+        return True
+    except ValueError:
+        return False
+
+# import cagatori # file con i membri del gruppo
 
 # Load environment variables from .env file
 load_dotenv()
@@ -52,89 +65,99 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Preparare dati da mettere nella tabella
 
             # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
+            try:
+                cursor.execute("select nome, fuso_orario from cagatori where user_id=  ?", (user_id,))
+                dati=cursor.fetchone()
+                # if (cagatori.cagatori[user_id]):
+                #     chi=cagatori.cagatori[user_id]
+                chi=dati[0]
 
-            if (cagatori.cagatori[user_id]):
-                chi=cagatori.cagatori[user_id]
-            else:
-                logging.error(f"Cagatore non trovato.")
-                await update.message.reply_text("Cagatore non trovato, inserirlo con /aggiungi.")
-                return
+                # giorno e ora
 
-            # giorno e ora
-            if f"Giorno: " in user_message:
-                value = user_message.split(f"Giorno: ")[1]
-                giorno=re.split(r'[,;\n]+',value)[0]
-            else:
-                giorno = update.message.date.date().strftime('%d/%m/%y')
-            if f"Ora: " in user_message:
-                value = user_message.split(f"Ora: ")[1]
-                ora=re.split(r'[,;\n]+',value)[0]
-            else:
 
-                # Prova a prendere il fuso orario, ma non funziona.
-
-                if hasattr(update.message.from_user, 'timezone') and update.message.from_user.timezone:
-                    user_tz = pytz.timezone(update.message.from_user.timezone)
-                    local_time = update.message.date.astimezone(user_tz)
-                    logging.info("Presa l'ora locale")
+                # assumo che nessuno metta il giorno senza mettere l'ora
+                # else:
+                #   giorno = update.message.date.date().strftime('%d/%m/%y')
+                if f"Ora: " in user_message:
+                    value = user_message.split(f"Ora: ")[1]
+                    ora=re.split(r'[,;\n]+',value)[0]
+                    if f"Giorno: " in user_message:
+                        value = user_message.split(f"Giorno: ")[1]
+                        giorno=re.split(r'[,;\n]+',value)[0]
+                    else:
+                        giorno = update.message.date.date().strftime('%d/%m/%y')
                 else:
-                    # Fallback: usa UTC
-                    local_time = update.message.date  # Rimane in UTC
-                    logging.info("Ora locale non presa. Prendo l'orario UTC")
-                ora = local_time.time().strftime('%H:%M')
+                    # user_tz = pytz.timezone(update.message.from_user.timezone)
+                    data=update.message.date + timedelta(hours=dati[1])
+                    giorno=data.date().strftime('%d/%m/%y')
+                    ora=data.time().strftime('%H:%M')
+                    # Prova a prendere il fuso orario, ma non funziona.
 
-            # altri dati, se forniti
-            if f"Città: " in user_message:
-                value = user_message.split(f"Città: ")[1]
-                citta=re.split(r'[,;\n]+',value)[0]
-            else:
-                citta=""
-            if f"Provincia: " in user_message:
-                value = user_message.split(f"Provincia: ")[1]
-                provincia=re.split(r'[,;\n]+',value)[0]
-            else:
-                provincia=""
-            if f"Regione: " in user_message:
-                value = user_message.split(f"Regione: ")[1]
-                regione=re.split(r'[,;\n]+',value)[0]
-            else:
-                regione=""
-            if f"Stato: " in user_message:
-                value = user_message.split(f"Stato: ")[1]
-                stato=re.split(r'[,;\n]+',value)[0]
-            else:
-                stato=""
-            if f"Altitudine: " in user_message:
-                value = user_message.split(f"Altitudine: ")[1]
-                altitudine=re.split(r'[,;\n]+',value)[0]
-            else:
-                altitudine=""
-            if f"Velocità: " in user_message:
-                value = user_message.split(f"Velocità: ")[1]
-                velocita=re.split(r'[,;\n]+',value)[0]
-            else:
-                velocita=""
+                    # if hasattr(update.message.from_user, 'timezone') and update.message.from_user.timezone:
+                    #     user_tz = pytz.timezone(update.message.from_user.timezone)
+                    #     local_time = update.message.date.astimezone(user_tz)
+                    #     logging.info("Presa l'ora locale")
+                    # else:
+                    #     # Fallback: usa UTC
+                    #     local_time = update.message.date  # Rimane in UTC
+                    #     logging.info("Ora locale non presa. Prendo l'orario UTC")
+                    # ora = local_time.time().strftime('%H:%M')
 
-            # Inserimento dati in google spreadsheets
+                # altri dati, se forniti
+                if f"Città: " in user_message:
+                    value = user_message.split(f"Città: ")[1]
+                    citta=re.split(r'[,;\n]+',value)[0]
+                else:
+                    citta=""
+                if f"Provincia: " in user_message:
+                    value = user_message.split(f"Provincia: ")[1]
+                    provincia=re.split(r'[,;\n]+',value)[0]
+                else:
+                    provincia=""
+                if f"Regione: " in user_message:
+                    value = user_message.split(f"Regione: ")[1]
+                    regione=re.split(r'[,;\n]+',value)[0]
+                else:
+                    regione=""
+                if f"Stato: " in user_message:
+                    value = user_message.split(f"Stato: ")[1]
+                    stato=re.split(r'[,;\n]+',value)[0]
+                else:
+                    stato=""
+                if f"Altitudine: " in user_message:
+                    value = user_message.split(f"Altitudine: ")[1]
+                    altitudine=re.split(r'[,;\n]+',value)[0]
+                else:
+                    altitudine=""
+                if f"Velocità: " in user_message:
+                    value = user_message.split(f"Velocità: ")[1]
+                    velocita=re.split(r'[,;\n]+',value)[0]
+                else:
+                    velocita=""
 
-            data=[chi, giorno, ora, citta, provincia, regione, stato, altitudine, velocita]
+                # Inserimento dati in google spreadsheets
 
-            logging.info(f"Data to be inserted: {data}")
+                roba=[chi, giorno, ora, citta, provincia, regione, stato, altitudine, velocita]
 
-            success = sheets_handler.append_data(data)
+                logging.info(f"Data to be inserted: {roba}")
 
-            # Se tutto va bene, reagire con "👍"
+                success = sheets_handler.append_data(roba)
 
-            if success:
-                await context.bot.set_message_reaction(
-                    chat_id=update.message.chat_id,
-                    message_id=update.message.message_id,
-                    reaction=[ReactionTypeEmoji("👍")]
-                )
-                logging.info(f"Dati cacca salvati")
-            else:
-                await update.message.reply_text("Qualcosa è andato storto. Riprova.")
-                logging.error(f"Qualcosa è andato storto.")
+                # Se tutto va bene, reagire con "👍"
+
+                if success:
+                    await context.bot.set_message_reaction(
+                        chat_id=update.message.chat_id,
+                        message_id=update.message.message_id,
+                        reaction=[ReactionTypeEmoji("👍")]
+                    )
+                    logging.info(f"Dati cacca salvati")
+                else:
+                    await update.message.reply_text("Qualcosa è andato storto. Riprova.")
+                    logging.error(f"Qualcosa è andato storto.")
+            except sqlite3.Error as e:
+                await update.message.reply_text("Errore. Probabilmente non sei nel database.")
+                logging.error(f"Errore. Cagatore non trovato.")
         else:
             logging.info(f"Messaggio ricevuto, ma ignorato perché non inizia con 💩")
             
@@ -155,7 +178,11 @@ Lista dei comandi:
 /help - Visualizza questo messaggio
 /sintassi - Visualizza sintassi dei messaggi di cacca
 /aggiungi - Aggiungi cagatore
+/join - Diventa un cagatore
 /rimuovi - Rimuovi cagatore
+/abbandona - Smetti di essere un cagatore
+/setfuso - Aggiorna il tuo fuso orario
+/cagatori - Lista tutti i cagatori
 
 """)
     logging.info("Messaggio di aiuto mandato")
@@ -180,100 +207,131 @@ Velocità: 1000000000
 """)
     logging.info("Mandato messaggio con la sintassi")
 
-# /aggiungi  NOTA: sostituire questo obbrobrio con un db sql fatto bene
+# /aggiungi - aggiungi nuovo utente, se c'è già dà errore
 async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Aggiungi cagatore"""
     LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND")
 
-    # Sintassi /aggiungi <user_id> <nome_sullo_spreadsheet> 
+    # Sintassi /aggiungi <user_id> <nome_sullo_spreadsheet> <fuso_orario UTC>
 
-    if context.args:
-        if(context.args[1] and context.args[1][0]!="="):
+    if (len(context.args)==3 and is_integer(context.args[0]) and is_integer(context.args[2])):
 
-            # NOTA: cagatori.cagatori è un dizionario in cui ci sono coppie {user_id, nome nello spreadsheet}.
-            # Per aggiornarlo, lo aggiorno in memoria e poi ristampo il contenuto del file cagatori.py.
-            # È una merda e va cambiato con qualcosa di sensato, tipo un database sql.
-            # Anche perché boh vorrei vedere anche i nomi delle persone, cosa che al momento è impossibile.
+        # Tutto implementato con un bel database sql
 
-            cagatori.cagatori[(int)(context.args[0])]=context.args[1]
-            with open('cagatori.py', 'w') as file:
-                print(f"# user id dei membri del gruppo\n\ncagatori={cagatori.cagatori}", file=file)
-            await update.message.reply_text(f"Aggiunto il cagatore {context.args[1]} con user_id {context.args[0]}")
-            logging.info(f"Aggiunto cagatore {context.args[1]} con user_id {context.args[0]}")
-        else:
-            await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_sullo_spreadsheet>")
-            logging.info("Spiegata la sintassi di /rimuovi")
+        try:
+            user_id=(int)(context.args[0])
+            nome=context.args[1]
+            fuso_orario=(int)(context.args[2])
+            cursor.execute("insert into cagatori values (?, ?, ?)", (user_id, nome, fuso_orario))
+            await update.message.reply_text(f"Aggiunto il cagatore {nome} con user_id {user_id} e fuso orario {fuso_orario}")
+            logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id} e fuso orario {fuso_orario}")
+            conn.commit()
+        except sqlite3.Error as e:
+            await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id")
+            logging.error(f"Errore nell'inserimento nel database. {e}")
+
     else:
-        await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_sullo_spreadsheet>")
-        logging.info("Spiegata la sintassi di /rimuovi")
+        await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_sullo_spreadsheet> <fuso_orario UTC>")
+        logging.info("Spiegata la sintassi di /aggiungi")
 
-# /rimuovi  NOTA: sostituire questo obbrobrio con un db sql fatto bene
+# join - Unisciti alla cacca
+async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Joina la cacca"""
+    LoggingCazzi.log_user_activity(update, "JOIN_COMMAND")
+
+    # Sintassi /join <nome_sullo_spreadsheet> <fuso_orario UTC>
+
+    if (len(context.args)==2 and is_integer(context.args[1])):
+
+        # Tutto implementato con un bel database sql
+        try:
+            user_id = update.message.from_user.id
+            nome=context.args[0]
+            fuso_orario=(int)(context.args[1])
+            cursor.execute("insert into cagatori values (?, ?, ?)", (user_id, nome, fuso_orario))
+            await update.message.reply_text(f"Complementi {nome}! Ora sei anche tu un cagatore! Il tuo fuso orario UTC è {fuso_orario}")
+            logging.info(f"Aggiunto cagatore {nome} con user_id {nome} e fuso orario {fuso_orario}")
+            conn.commit()
+        except sqlite3.Error as e:
+            await update.message.reply_text("Errore nell'inserimento nel database. Forse sei già nel database o qualcuno ha il tuo stesso nome")
+            logging.error(f"Errore nell'inserimento nel database. {e}")
+    else:
+        await update.message.reply_text("Sintassi: /join <nome_sullo_spreadsheet> <fuso_orario UTC>")
+        logging.info("Spiegata la sintassi di /join")
+
+# /rimuovi
 async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Rimuovi cagatore"""
     LoggingCazzi.log_user_activity(update, "RIMUOVI_COMMAND")
 
-    # Sintassi: /rimuovi <user_id>
+    # Sintassi: /rimuovi <nome>
 
-    if context.args:
-        if cagatori.cagatori[context.args[0]]:
+    if (len(context.args)==1):
 
-            # NOTA: cagatori.cagatori è un dizionario in cui ci sono coppie {user_id, nome nello spreadsheet}.
-            # Per aggiornarlo, lo aggiorno in memoria e poi ristampo il contenuto del file cagatori.py.
-            # È una merda e va cambiato con qualcosa di sensato, tipo un database sql.
-            # Anche perché boh vorrei vedere anche i nomi delle persone, cosa che al momento è impossibile.
-
-            del cagatori.cagatori[context.args[0]]
-            with open('cagatori.py', 'w') as file:
-                print(f"# user id dei membri del gruppo\n\ncagatori={cagatori.cagatori}", file=file)
-            await update.message.reply_text(f"Rimosso il cagatore con user_id {context.args}")
-            logging.info("Rimosso cagatore con user_id {context.args}")
-        else:
-            logging.info(f"Il cagatore con user_id {context.args} non esiste")
-            await update.message.reply_text(f"Il cagatore con user_id {context.args} non esiste")
+        # Tutto implementato con un bel database sql
+        try:
+            nome=context.args[0]
+            cursor.execute("delete from cagatori where nome=?", (nome,))
+            await update.message.reply_text(f"Rimosso il cagatore {nome}")
+            logging.info(f"Rimosso cagatore {nome}")
+            conn.commit()
+        except sqlite3.Error as e:
+            await update.message.reply_text(f"Errore nella rimozione. Probabilmente non c'è nessun cagatore con questo nome.")
+            logging.error(f"Errore nella rimozione. {e}")
+        
     else:
         await update.message.reply_text("Sintassi: /rimuovi <user_id>")
         logging.info("Spiegata la sintassi di /rimuovi")
 
-# # /logs
-# async def show_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     """Mostra i log recenti"""
-#     try:
-#         user_id = update.message.from_user.id
-        
-#         # Check if user is admin (if ADMIN_USER_ID is set)
-#         if ADMIN_USER_ID and str(user_id) != ADMIN_USER_ID:
-#             LoggingCazzi.log_user_activity(update, "LOGS_COMMAND", "Unauthorized access attempt")
-#             await update.message.reply_text("❌ You are not authorized to use this command.")
-#             return
-        
-#         LoggingCazzi.log_user_activity(update, "LOGS_COMMAND", "Requested logs")
-        
-#         # Read the last few lines from the log file
-#         log_file_path = 'logs/telegram_bot.log'
-#         if not os.path.exists(log_file_path):
-#             await update.message.reply_text("📝 No log file found.")
-#             return
-        
-#         with open(log_file_path, 'r', encoding='utf-8') as file:
-#             lines = file.readlines()
-        
-#         # Get the last 50 lines (adjust as needed)
-#         recent_logs = lines[-50:]
-#         log_text = "".join(recent_logs)
-        
-#         # Telegram message limit is 4096 characters
-#         if len(log_text) > 4096:
-#             log_text = "...\n" + log_text[-4090:]
-        
-#         await update.message.reply_text(f"📝 Recent logs:\n```\n{log_text}\n```", 
-#                                       parse_mode='MarkdownV2')
-#         logging.info("Logs sent to admin user")
-        
-#     except Exception as e:
-#         logging.error(f"Error in show_logs: {e}", exc_info=True)
-#         await update.message.reply_text("❌ An error occurred while reading logs")
+# /abbandona
+async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Abbandona la cacca"""
+    LoggingCazzi.log_user_activity(update, "ABBANDONA_COMMAND")
 
-# error_handler - viene eseguito quando c'è un qualche errore
+    # Sintassi: /abbandona
+
+    try:
+        user_id = update.message.from_user.id
+        cursor.execute("delete from cagatori where user_id=?", (user_id,))
+        await update.message.reply_text(f"Addio, ci mancherai! 😢")
+        logging.info(f"Rimosso cagatore con user_id {user_id}")
+        conn.commit()
+    except sqlite3.Error as e:
+        await update.message.reply_text(f"Errore nella rimozione. Probabilmente non sei nel database.")
+        logging.error(f"Errore nella rimozione. {e}")
+
+# /setfuso
+async def setfuso_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Modifica il fuso orario"""
+
+    # Sintassi: /setfuso <nuovo_fuso UTC> 
+    if(len(context.args)==1 and is_integer(context.args[0])):
+        try:
+            user_id = update.message.from_user.id
+            fuso=(int)(context.args[0])
+            cursor.execute("update cagatori set fuso_orario=? where user_id=?", (fuso, user_id))
+            await update.message.reply_text(f"Fuso orario aggiornato a UTC {fuso}")
+            logging.info(f"Fuso orario aggiornato a UTC {fuso}")
+            conn.commit()
+        except sqlite3.Error as e:
+            await update.message.reply_text(f"Errore. Probabilmente non sei nel database.")
+            logging.error(f"Errore. {e}")
+    else:
+        await update.message.reply_text("Sintassi: /setfuso <nuovo_fuso UTC>")
+        logging.info("Spiegata la sintassi di /setfuso")
+
+# /cagatori
+async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Visualizza tutti i cagatori"""
+
+    try:
+        cursor.execute("select nome from cagatori")
+        await update.message.reply_text(f"Lista cagatori:\n{cursor.fetchall()}")
+        logging.info("Mandata lista dei cagatori")
+        conn.commit()
+    except sqlite3.Error as e:
+        await update.message.reply_text(f"Errore.")
+        logging.error(f"Errore. {e}")
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Log errors caused by Updates."""
@@ -298,12 +356,24 @@ def main():
         # Add handlers
         application.add_handler(CommandHandler("start", start_command))
 
+
+# help - Visualizza questo messaggio
+# sintassi - Visualizza sintassi dei messaggi di cacca
+# aggiungi - Aggiungi cagatore
+# join - Diventa un cagatore
+# rimuovi - Rimuovi cagatore
+# abbandona - Smetti di essere un cagatore
+# setfuso - Aggiorna il tuo fuso orario
+# cagatori - Lista tutti i cagatori
+
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("sintassi", sintassi_command))
         application.add_handler(CommandHandler("aggiungi", aggiungi_command))
+        application.add_handler(CommandHandler("join", join_command))
         application.add_handler(CommandHandler("rimuovi", rimuovi_command))
-
-        # application.add_handler(CommandHandler("logs", show_logs))
+        application.add_handler(CommandHandler("abbandona", abbandona_command))
+        application.add_handler(CommandHandler("setfuso", setfuso_command))
+        application.add_handler(CommandHandler("cagatori", cagatori_command))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
         # Add error handler

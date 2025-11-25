@@ -1,16 +1,16 @@
 Cacca_bot: bot telegram che aggiunge le cacche al google fogli.
 
 Da implementare:
-- Inserire funzione per il fuso orario delle persone
 - Inserire sicurezza, ovvero fare in modo che il bot funzioni solo nel gruppo e con gli admin
-- Inserire funzione che visualizza le ultime cacche
 - Inserire funzione per togliere l'ultima propria cacca inserita
 - Inserire funzione per vedere la classifica
-- Capire quali sono i requirements
 - Deployare il bot su un qualche servizio in modo che giri sempre
 
 Setup:
-- Scrivere un file di setup
-- Mettere il token del bot telegram in .env e le credenziali di google cazzi nella cartella apposita.
-- Inserire i membri del gruppo nel file cagatori.py con i loro user id di telegram (si trova con @userinfobot su telegram).
-- python3 bot.py
+- Mettere il token del bot telegram in .env e le credenziali di google cazzi in Google_sheets/.
+  $ python3 -m venv venv  # Crea venv per python
+- $ pip install -r requirements.txt  # Installa i pacchetti richiesti
+- $ sqlite3 cagatori.db  # Crea il database
+- sqlite> CREATE TABLE cagatori(user_id int NOT NULL, nome varchar(100) NOT NULL UNIQUE, fuso_orario int NOT NULL, PRIMARY KEY (user_id));  -- Crea la tabella con i cagatori
+- sqlite> .quit  -- Esce da sqlite3
+- $ python3 bot.py  # runna il bot
