@@ -14,7 +14,7 @@ WORKSHEET_NAME = os.getenv('WORKSHEET_NAME', 'Sheet1')
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
 # Validate required environment variables
-required_vars = ['TELEGRAM_BOT_TOKEN', 'GOOGLE_SHEETS_CREDENTIALS_FILE', 'SPREADSHEET_NAME']
+required_vars = ['WORKSHEET_NAME', 'SPREADSHEET_NAME']
 missing_vars = [var for var in required_vars if not os.getenv(var)]
 if missing_vars:
     raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")

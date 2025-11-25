@@ -9,7 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration from environment variables
-WORKSHEET_NAME = os.getenv('WORKSHEET_NAME', 'Sheet1')
+WORKSHEET_NAME = os.getenv('WORKSHEET_NAME')
+# Validate required environment variables
+required_vars = ['WORKSHEET_NAME']
+missing_vars = [var for var in required_vars if not os.getenv(var)]
+if missing_vars:
+    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 class GoogleSheetsHandler:
     def __init__(self, creds_file, spreadsheet_name):
@@ -50,13 +55,31 @@ class GoogleSheetsHandler:
         except Exception as e:
             self.logger.error(f"Error appending data: {e}", exc_info=True)
             return False
+        
+    # def remove_last_cacca(self, nome):
+    #     """Rimuove l'ultima cacca"""
+    #     try:
+    #         row_count = get_populated_row_count(self.sheet)
+    #         span = min(row_count, 10)
+    #         first_row=row_count+1-span
+    #         range_str = f"A{first_row}:A{row_count}"
+    #         last_rows = self.sheet.get(range_str)
+    #         print(row_count, range_str, last_rows)
+    #         for i in range(span - 1, -1, -1):
+    #             if (last_rows[i][0] == nome):
+    #                 self.sheet.delete_rows(first_row + i)
+    #                 return last_rows[i]
+    #         self.logger.error(f"Errore. {last_rows}")
+    #     except Exception as e:
+    #         self.logger.error(f"Error removing data: {e}", exc_info=True)
+    #         return False
     
-    def get_all_data(self):
-        """Get all data from the spreadsheet"""
-        try:
-            data = self.sheet.get_all_records()
-            self.logger.info(f"Retrieved {len(data)} records from spreadsheet")
-            return data
-        except Exception as e:
-            self.logger.error(f"Error getting data: {e}", exc_info=True)
-            return []
+    # def get_all_data(self):
+    #     """Get all data from the spreadsheet"""
+    #     try:
+    #         data = self.sheet.get_all_records()
+    #         self.logger.info(f"Retrieved {len(data)} records from spreadsheet")
+    #         return data
+    #     except Exception as e:
+    #         self.logger.error(f"Error getting data: {e}", exc_info=True)
+    #         return []
