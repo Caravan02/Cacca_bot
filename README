@@ -1,13 +1,12 @@
 Cacca_bot: bot telegram che aggiunge le cacche al google fogli.
 
 Da implementare:
-- Inserire sicurezza, ovvero fare in modo che il bot funzioni solo nel gruppo e con gli admin
-- Inserire funzione per togliere l'ultima propria cacca inserita
+- Mettere comandi disponibili solo per gli admin, con corrispondente help.
 - Inserire funzione per vedere la classifica
 - Deployare il bot su un qualche servizio in modo che giri sempre
 
 Setup:
-- Mettere il token del bot telegram in .env e le credenziali di google cazzi in Google_sheets/.
+- Creare un file .env con i dati come in .env.example
   $ python3 -m venv venv  # Crea venv per python
 - $ pip install -r requirements.txt  # Installa i pacchetti richiesti
 - $ sqlite3 cagatori.db  # Crea il database
