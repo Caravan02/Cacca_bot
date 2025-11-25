@@ -43,7 +43,7 @@ def setup_logging():
     
     # File handler with rotation (max 10MB per file, keep 5 backup files)
     file_handler = RotatingFileHandler(
-        'logs/telegram_bot.log',
+        'logs/bot.log',
         maxBytes=10*1024*1024,  # 10MB
         backupCount=5,
         encoding='utf-8'
@@ -51,14 +51,18 @@ def setup_logging():
     file_handler.setLevel(log_level)
     file_handler.setFormatter(formatter)
     
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(log_level)
-    console_handler.setFormatter(formatter)
+    # Console handler (suppressed because it was annoying)
+    # console_handler = logging.StreamHandler()
+    # console_handler.setLevel(log_level)
+    # console_handler.setFormatter(formatter)
+
+    # Suppressing polling logs
+    httpx_logger = logging.getLogger('httpx')
+    httpx_logger.setLevel(logging.WARNING)
     
     # Add handlers to logger
     logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    # logger.addHandler(console_handler)
     
     # Log startup information
     logging.info("=" * 50)

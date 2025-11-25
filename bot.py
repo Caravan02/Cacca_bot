@@ -239,7 +239,7 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND", f"args: {context.args}")
     if (is_admin(user_id)):
 
-        # Sintassi /aggiungi <user_id> <nome_sullo_spreadsheet> <fuso_orario UTC>
+        # Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso_orario UTC>
 
         if (len(context.args)==3 and is_integer(context.args[0]) and is_integer(context.args[2])):
 
@@ -258,7 +258,7 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.error(f"Errore nell'inserimento nel database. {e}")
 
         else:
-            await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_sullo_spreadsheet> <fuso_orario UTC>")
+            await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso_orario UTC>")
             logging.info("Spiegata la sintassi di /aggiungi")
     else:
         if(update.effective_chat.id == GRUPPO_CACCA):
@@ -280,7 +280,7 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "JOIN_COMMAND", f"args: {context.args}")
     if ((chat_id == GRUPPO_CACCA) or is_admin(user_id)):
 
-        # Sintassi /join <nome_sullo_spreadsheet> <fuso_orario UTC>
+        # Sintassi /join <nome_spreadsheet> <fuso_orario UTC>
 
         if (len(context.args)==2 and is_integer(context.args[1])):
 
@@ -297,7 +297,7 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("Errore nell'inserimento nel database. Forse sei già nel database o qualcuno ha il tuo stesso nome")
                 logging.error(f"Errore nell'inserimento nel database. {e}")
         else:
-            await update.message.reply_text("Sintassi: /join <nome_sullo_spreadsheet> <fuso_orario UTC>")
+            await update.message.reply_text("Sintassi: /join <nome_spreadsheet> <fuso_orario UTC>")
             logging.info("Spiegata la sintassi di /join")
     else:
         logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
@@ -327,7 +327,7 @@ async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.error(f"Errore nella rimozione. {e}")
             
         else:
-            await update.message.reply_text("Sintassi: /rimuovi <user_id>")
+            await update.message.reply_text("Sintassi: /rimuovi <nome>")
             logging.info("Spiegata la sintassi di /rimuovi")
     else:
         if(update.effective_chat.id == GRUPPO_CACCA):
