@@ -72,5 +72,5 @@ def log_user_activity(update: Update, action: str, details: str = ""):
     """Helper function to log user activities"""
     user = update.effective_user
     user_info = f"User {user.id} ({user.username or 'no-username'})"
-
+    logging.info("-" * 50)
     logging.info(f"USER_ACTIVITY - {user_info} - {action} - {details}")
