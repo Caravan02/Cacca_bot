@@ -9,3 +9,15 @@ Setup:
 - sqlite> INSERT INTO cagatori values (<user_id>, <nome>, <fuso_orario>, 1)  -- Aggiungi il primo cagatore come admin 
 - sqlite> .quit  -- Esce da sqlite3
 - $ python3 bot.py  # runna il bot
+
+Istruzioni:
+Dopo il setup iniziale, il bot traccia le cacche solamente dell'unico utente che è stato inserito nel database.
+Ogni persona interessata può "iscriversi" nel database con il comando /join, o essere aggiunta da un admin con il comando /aggiungi.
+In questo processo bisogna specificare il nome, che sarà quello che poi compare nel google fogli (quindi tutti quelli già nel google fogli devono scegliere lo stesso nome altrimenti si sminchiano le statistiche).
+Inoltre, bisogna specificare il proprio fuso orario UTC, così il bot può inserire l'ora locale corretta.
+Se ci si sposta (o se cambia l'ora, mannaggia all'ora solare), bisogna ricordarsi di cambiare il proprio fuso orario con il comando /setfuso.
+Una volta fatto ciò, le proprie cacche verranno inserite nel google fogli in questo modo: ogni messaggio verrà considerato dal bot se e solo se inizia con una cacca, e per un messaggio base che contiene solo l'emoji della cacca verranno inserite nel database solo il nome del cagatore, la data e l'ora aggiustate in base al fuso.
+Questo messaggio si può ampliare specificando cose, per esempio il messaggio "<emoji della cacca> Città: Everest, Altitudine 8848, Stato: Nepal" aggiunge anche le rispettive informazioni nel foglio google.
+Per maggiori informazioni, consultare il comando /sintassi che spiega tutto.
+Se tutto va a buon fine, il bot reagirà con un pollice in su al messaggio.
+Per una lista completa dei comandi, consultare il comando /help.
