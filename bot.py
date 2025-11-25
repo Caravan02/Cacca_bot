@@ -6,6 +6,7 @@ from telegram import Update, ReactionTypeEmoji
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
 from dotenv import load_dotenv
 import re
+import pytz
 
 import cagatori # file con i membri del gruppo
 
@@ -38,63 +39,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/start (attualmente non operativo)."""
     LoggingCazzi.log_user_activity(update, "START_COMMAND")
 
-# /add
-async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Aggiungi riga al foglio google"""
-    try:
-        if not context.args:
-            LoggingCazzi.log_user_activity(update, "ADD_COMMAND", "No data provided")
-            await update.message.reply_text("Please provide data to add. Example: /add John,25,Engineer")
-            return
-        
-        # Join arguments and split by comma
-        data_text = ' '.join(context.args)
-        data = [item.strip() for item in data_text.split(',')]
-        
-        LoggingCazzi.log_user_activity(update, "ADD_COMMAND", f"Data: {data}")
-        
-        success = sheets_handler.append_data(data)
-        
-        if success:
-            response = f"✅ Data added successfully: {', '.join(data)}"
-            await update.message.reply_text(response)
-            logging.info(f"Data added successfully: {data}")
-        else:
-            await update.message.reply_text("❌ Failed to add data to spreadsheet")
-            logging.error(f"Failed to add data: {data}")
-            
-    except Exception as e:
-        logging.error(f"Error in add_data: {e}", exc_info=True)
-        await update.message.reply_text("❌ An error occurred while adding data")
-
-# /view
-async def view_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """View all data from Google Sheets"""
-    try:
-        LoggingCazzi.log_user_activity(update, "VIEW_COMMAND")
-        
-        data = sheets_handler.get_all_data()
-        
-        if not data:
-            await update.message.reply_text("📊 The spreadsheet is empty")
-            return
-        
-        response = "📊 Spreadsheet Data:\n\n"
-        for i, row in enumerate(data, 1):
-            row_text = ", ".join([f"{k}: {v}" for k, v in row.items()])
-            response += f"{i}. {row_text}\n"
-        
-        # Telegram has a message length limit, so truncate if necessary
-        if len(response) > 4096:
-            response = response[:4090] + "..."
-            
-        await update.message.reply_text(response)
-        logging.info(f"View command completed. Sent {len(data)} records")
-        
-    except Exception as e:
-        logging.error(f"Error in view_data: {e}", exc_info=True)
-        await update.message.reply_text("❌ An error occurred while fetching data")
-
 # Handler dei messaggi - viene eseguito ogni volta che qualcuno scrive un messaggio
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gestione dei messaggi"""
@@ -126,7 +70,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 value = user_message.split(f"Ora: ")[1]
                 ora=re.split(r'[,;\n]+',value)[0]
             else:
-                ora = update.message.date.time().strftime('%H:%M')
+
+                # Prova a prendere il fuso orario, ma non funziona.
+
+                if hasattr(update.message.from_user, 'timezone') and update.message.from_user.timezone:
+                    user_tz = pytz.timezone(update.message.from_user.timezone)
+                    local_time = update.message.date.astimezone(user_tz)
+                    logging.info("Presa l'ora locale")
+                else:
+                    # Fallback: usa UTC
+                    local_time = update.message.date  # Rimane in UTC
+                    logging.info("Ora locale non presa. Prendo l'orario UTC")
+                ora = local_time.time().strftime('%H:%M')
 
             # altri dati, se forniti
             if f"Città: " in user_message:
@@ -240,7 +195,7 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # È una merda e va cambiato con qualcosa di sensato, tipo un database sql.
             # Anche perché boh vorrei vedere anche i nomi delle persone, cosa che al momento è impossibile.
 
-            cagatori.cagatori[context.args[0]]=context.args[1]
+            cagatori.cagatori[(int)(context.args[0])]=context.args[1]
             with open('cagatori.py', 'w') as file:
                 print(f"# user id dei membri del gruppo\n\ncagatori={cagatori.cagatori}", file=file)
             await update.message.reply_text(f"Aggiunto il cagatore {context.args[1]} con user_id {context.args[0]}")
@@ -279,46 +234,47 @@ async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Sintassi: /rimuovi <user_id>")
         logging.info("Spiegata la sintassi di /rimuovi")
 
-# /logs
-async def show_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Mostra i log recenti"""
-    try:
-        user_id = update.message.from_user.id
+# # /logs
+# async def show_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     """Mostra i log recenti"""
+#     try:
+#         user_id = update.message.from_user.id
         
-        # Check if user is admin (if ADMIN_USER_ID is set)
-        if ADMIN_USER_ID and str(user_id) != ADMIN_USER_ID:
-            LoggingCazzi.log_user_activity(update, "LOGS_COMMAND", "Unauthorized access attempt")
-            await update.message.reply_text("❌ You are not authorized to use this command.")
-            return
+#         # Check if user is admin (if ADMIN_USER_ID is set)
+#         if ADMIN_USER_ID and str(user_id) != ADMIN_USER_ID:
+#             LoggingCazzi.log_user_activity(update, "LOGS_COMMAND", "Unauthorized access attempt")
+#             await update.message.reply_text("❌ You are not authorized to use this command.")
+#             return
         
-        LoggingCazzi.log_user_activity(update, "LOGS_COMMAND", "Requested logs")
+#         LoggingCazzi.log_user_activity(update, "LOGS_COMMAND", "Requested logs")
         
-        # Read the last few lines from the log file
-        log_file_path = 'logs/telegram_bot.log'
-        if not os.path.exists(log_file_path):
-            await update.message.reply_text("📝 No log file found.")
-            return
+#         # Read the last few lines from the log file
+#         log_file_path = 'logs/telegram_bot.log'
+#         if not os.path.exists(log_file_path):
+#             await update.message.reply_text("📝 No log file found.")
+#             return
         
-        with open(log_file_path, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
+#         with open(log_file_path, 'r', encoding='utf-8') as file:
+#             lines = file.readlines()
         
-        # Get the last 50 lines (adjust as needed)
-        recent_logs = lines[-50:]
-        log_text = "".join(recent_logs)
+#         # Get the last 50 lines (adjust as needed)
+#         recent_logs = lines[-50:]
+#         log_text = "".join(recent_logs)
         
-        # Telegram message limit is 4096 characters
-        if len(log_text) > 4096:
-            log_text = "...\n" + log_text[-4090:]
+#         # Telegram message limit is 4096 characters
+#         if len(log_text) > 4096:
+#             log_text = "...\n" + log_text[-4090:]
         
-        await update.message.reply_text(f"📝 Recent logs:\n```\n{log_text}\n```", 
-                                      parse_mode='MarkdownV2')
-        logging.info("Logs sent to admin user")
+#         await update.message.reply_text(f"📝 Recent logs:\n```\n{log_text}\n```", 
+#                                       parse_mode='MarkdownV2')
+#         logging.info("Logs sent to admin user")
         
-    except Exception as e:
-        logging.error(f"Error in show_logs: {e}", exc_info=True)
-        await update.message.reply_text("❌ An error occurred while reading logs")
+#     except Exception as e:
+#         logging.error(f"Error in show_logs: {e}", exc_info=True)
+#         await update.message.reply_text("❌ An error occurred while reading logs")
 
 # error_handler - viene eseguito quando c'è un qualche errore
+
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Log errors caused by Updates."""
     logging.error(f"Exception while handling an update: {context.error}", exc_info=True)
@@ -341,15 +297,13 @@ def main():
 
         # Add handlers
         application.add_handler(CommandHandler("start", start_command))
-        application.add_handler(CommandHandler("add", add_command))
-        application.add_handler(CommandHandler("view", view_command))
 
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("sintassi", sintassi_command))
         application.add_handler(CommandHandler("aggiungi", aggiungi_command))
         application.add_handler(CommandHandler("rimuovi", rimuovi_command))
 
-        application.add_handler(CommandHandler("logs", show_logs))
+        # application.add_handler(CommandHandler("logs", show_logs))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
         # Add error handler

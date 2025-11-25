@@ -10,6 +10,7 @@ Da implementare:
 - Deployare il bot su un qualche servizio in modo che giri sempre
 
 Setup:
+- Scrivere un file di setup
 - Mettere il token del bot telegram in .env e le credenziali di google cazzi nella cartella apposita.
 - Inserire i membri del gruppo nel file cagatori.py con i loro user id di telegram (si trova con @userinfobot su telegram).
 - python3 bot.py
