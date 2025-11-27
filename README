@@ -1,6 +1,7 @@
 Cacca_bot: bot telegram che aggiunge le cacche al google fogli.
 
 Setup:
+- Creare un service account google cloud, dargli i permessi per usare l'api di google drive e google sheets, e dare a questo account permessi di editor sul foglio google
 - Creare un file .env con i dati come in .env.example
   $ python3 -m venv venv  # Crea venv per python
 - $ pip install -r requirements.txt  # Installa i pacchetti richiesti

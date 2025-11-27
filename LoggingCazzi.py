@@ -9,12 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration from environment variables
-SPREADSHEET_NAME = os.getenv('SPREADSHEET_NAME')
+SPREADSHEET_URL = os.getenv('SPREADSHEET_URL')
 WORKSHEET_NAME = os.getenv('WORKSHEET_NAME', 'Sheet1')
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
 # Validate required environment variables
-required_vars = ['WORKSHEET_NAME', 'SPREADSHEET_NAME']
+required_vars = ['WORKSHEET_NAME', 'SPREADSHEET_URL']
 missing_vars = [var for var in required_vars if not os.getenv(var)]
 if missing_vars:
     raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
@@ -69,7 +69,7 @@ def setup_logging():
     logging.info("Telegram Bot Starting Up")
     logging.info("=" * 50)
     logging.info(f"Log level: {LOG_LEVEL}")
-    logging.info(f"Spreadsheet: {SPREADSHEET_NAME}")
+    logging.info(f"Spreadsheet: {SPREADSHEET_URL}")
     logging.info(f"Worksheet: {WORKSHEET_NAME}")
 
 def log_user_activity(update: Update, action: str, details: str = ""):

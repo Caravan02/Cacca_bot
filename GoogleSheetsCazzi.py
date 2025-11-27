@@ -17,9 +17,9 @@ if missing_vars:
     raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 class GoogleSheetsHandler:
-    def __init__(self, creds_file, spreadsheet_name):
+    def __init__(self, creds_file, spreadsheet_url):
         self.creds_file = creds_file
-        self.spreadsheet_name = spreadsheet_name
+        self.spreadsheet_url = spreadsheet_url
         self.client = None
         self.sheet = None
         self.logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class GoogleSheetsHandler:
             ]
             creds = Credentials.from_service_account_file(self.creds_file, scopes=scopes)
             self.client = gspread.authorize(creds)
-            self.sheet = self.client.open(self.spreadsheet_name).worksheet(WORKSHEET_NAME)
+            self.sheet = self.client.open_by_url(self.spreadsheet_url).worksheet(WORKSHEET_NAME)
             self.logger.info("Google Sheets client initialized successfully")
         except Exception as e:
             self.logger.error(f"Error setting up Google Sheets client: {e}", exc_info=True)
