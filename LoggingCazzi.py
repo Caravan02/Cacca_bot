@@ -10,7 +10,7 @@ load_dotenv()
 
 # Configuration from environment variables
 SPREADSHEET_URL = os.getenv('SPREADSHEET_URL')
-WORKSHEET_NAME = os.getenv('WORKSHEET_NAME', 'Sheet1')
+WORKSHEET_NAME = os.getenv('WORKSHEET_NAME')
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
 # Validate required environment variables

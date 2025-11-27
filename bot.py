@@ -219,14 +219,19 @@ Sintassi per i messaggi di cacca:
 
 · Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
 · Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "Keyword: valore".
-Le keyword accettate sono: Giorno, Ora, Città, Provincia, Regione, Stato, Altitudine, Velocità, e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
-Occhio alle maiuscole! Le keyword non riconosciute saranno ignorate.
-Esempio:
+Le keyword accettate sono: Giorno, Ora, Città, Provincia, Regione, Stato, Altitudine, Velocità, (l'altitudine è da considerarsi in metri slm e la velocità in km/h) e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
+Occhio alle maiuscole! Le keyword non riconosciute saranno ignorate. L'ordine non è importante.
+
+Esempio che usa ogni campo:
 "💩
+Giorno: 03/03/25
 Ora: 04:20
 Città: Sale Marasino
-Provincia: Brescia
-Velocità: 1000000000"
+Provincia: BS
+Regione: Lombardia
+Stato: Italia
+Altitudine: 250
+Velocità: 340"
         """)
                 logging.info("Mandato messaggio con la sintassi")
             else:
