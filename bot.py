@@ -99,7 +99,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 dati=cursor.fetchone()
                 if(not dati):
                     # await update.message.reply_text("Errore. Probabilmente non sei nel database.")
-                    logging.info("Utente non nel database. Input ignorato.")
+                    logging.info("Utente non nel database: input ignorato.")
                 else:
                     chi=dati[0]
 
@@ -191,7 +191,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             message_id=update.message.message_id,
                             reaction=[ReactionTypeEmoji("👍")]
                         )
-                        logging.info(f"Dati cacca salvati")
+                        logging.info(f"Dati cacca salvati.")
                     else:
                         await update.message.reply_text("Qualcosa è andato storto. Riprova.")
                         logging.error(f"Dati cacca non salvati.")
@@ -225,7 +225,7 @@ Lista dei comandi:
 /mieidati - Visualizza i propri dati
 /setdato - Aggiorna un proprio dato
         """)
-            logging.info("Messaggio di aiuto mandato")
+            logging.info("Messaggio di aiuto mandato.")
         else:
             logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         logging.info("-"*50)
@@ -278,7 +278,7 @@ Altitudine: 250
 Velocità: 340"
         """)
 
-                logging.info("Mandato messaggio con la sintassi")
+                logging.info("Mandato messaggio con la sintassi.")
             else:
                 await update.message.reply_text("Non sei un cagatore. Fare /join per unirsi.")
                 logging.info("L'utente non è un cagatore.")
@@ -312,8 +312,8 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
                     conn.commit()
                 except sqlite3.Error as e:
-                    await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id")
-                    logging.error(f"Errore nell'inserimento nel database. {e}")
+                    await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id.")
+                    logging.error(f"Errore nell'inserimento nel database: {e}")
 
             else:
                 await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>")
@@ -356,7 +356,7 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     conn.commit()
                 except sqlite3.Error as e:
                     await update.message.reply_text("Errore nell'inserimento nel database. Forse sei già nel database o qualcuno ha il tuo stesso nome.")
-                    logging.error(f"Errore nell'inserimento nel database. {e}")
+                    logging.error(f"Errore nell'inserimento nel database: {e}")
             else:
                 await update.message.reply_text("Sintassi: /join <nome_spreadsheet> <fuso UTC> <città> <stato>")
                 logging.info("Spiegata la sintassi di /join")
@@ -389,7 +389,7 @@ async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         logging.info(f"Il cagatore {nome} non esiste.")
                 except sqlite3.Error as e:
                     await update.message.reply_text(f"Errore nella rimozione.")
-                    logging.error(f"Errore nella rimozione. {e}")
+                    logging.error(f"Errore nella rimozione: {e}")
             else:
                 await update.message.reply_text("Sintassi: /rimuovi <nome>")
                 logging.info("Spiegata la sintassi di /rimuovi")
@@ -422,11 +422,11 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     user_id = update.message.from_user.id
                     cursor.execute("delete from cagatori where user_id=?", (user_id,))
                     await update.message.reply_text(f"Addio, ci mancherai! 😢")
-                    logging.info(f"Rimosso cagatore con user_id {user_id} (oppure non c'era)")
+                    logging.info(f"Il cagatore {user_id} se n'è andato e non ritorna più.")
                     conn.commit()
                 except sqlite3.Error as e:
                     await update.message.reply_text(f"Errore nella rimozione.")
-                    logging.error(f"Errore nella rimozione. {e}")
+                    logging.error(f"Errore nella rimozione: {e}")
             else:
                 await update.message.reply_text("Non sei un cagatore. Fare /join per unirsi.")
                 logging.info("L'utente non è un cagatore.")
@@ -450,8 +450,8 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         if(is_integer(context.args[1])):
                             fuso=(int)(context.args[1])
                             cursor.execute("update cagatori set fuso=? where user_id=?", (fuso, user_id))
-                            await update.message.reply_text(f"Fuso orario aggiornato a UTC {fuso}")
-                            logging.info(f"Fuso orario aggiornato a UTC {fuso}")
+                            await update.message.reply_text(f"Fuso orario aggiornato a UTC {fuso}.")
+                            logging.info(f"Fuso orario aggiornato a UTC {fuso}.")
                             conn.commit()
                         else:
                             await update.message.reply_text("Errore: il secondo argomento non è valido.")
@@ -459,8 +459,8 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     elif context.args[0] == 'Città':
                         cursor.execute("update cagatori set citta=? where user_id=?", (context.args[1], user_id))
-                        await update.message.reply_text(f"Città aggiornata a {context.args[1]}")
-                        logging.info(f"Città aggiornata a {context.args[1]}")
+                        await update.message.reply_text(f"Città aggiornata a {context.args[1]}.")
+                        logging.info(f"Città aggiornata a {context.args[1]}.")
                         conn.commit()
 
                     # elif context.args[0] == 'Provincia':
@@ -488,8 +488,8 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         #     logging.info(f"Stato aggiornato a {context.args[1]}")
                         #     conn.commit()
                         cursor.execute("update cagatori set stato=? where user_id=?", (context.args[1], user_id))
-                        await update.message.reply_text(f"Stato aggiornato a {context.args[1]}")
-                        logging.info(f"Stato aggiornato a {context.args[1]}")
+                        await update.message.reply_text(f"Stato aggiornato a {context.args[1]}.")
+                        logging.info(f"Stato aggiornato a {context.args[1]}.")
                         conn.commit()
 
                     else:
@@ -526,10 +526,10 @@ async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     else:
                         messaggio += f"{lista[0]}   Fuso: {lista[1]}, Città: {lista[3]}, Stato: {lista[4]}\n"
                 await update.message.reply_text(messaggio, parse_mode='HTML') # Per scrivere in grassetto gli admin
-                logging.info("Mandata lista dei cagatori")
+                logging.info("Mandata lista dei cagatori.")
             except sqlite3.Error as e:
                 await update.message.reply_text(f"Errore nel recuperare la lista dei cagatori.")
-                logging.error(f"Errore. {e}")
+                logging.error(f"Errore: {e}")
         else:
             logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         logging.info("-"*50)
@@ -592,7 +592,7 @@ async def rmadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         logging.info(f"Il cagatore {nome} non esiste.")
                 except sqlite3.Error as e:
                     await update.message.reply_text(f"Errore.")
-                    logging.error(f"Errore. {e}")
+                    logging.error(f"Errore: {e}")
             else:
                 await update.message.reply_text("Sintassi: /rmadmin <nome>")
                 logging.info("Spiegata la sintassi di /rmadmin")
