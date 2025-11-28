@@ -32,9 +32,14 @@ LoggingCazzi.setup_logging()
 # CREATE TABLE cagatori(
 # user_id int NOT NULL,
 # nome varchar(100) NOT NULL UNIQUE, 
-# fuso_orario int NOT NULL,
+# fuso int NOT NULL,
 # admin bool NOT NULL DEFAULT 0,
+# citta varchar(100)
+## provincia varchar(100)
+## regione varchar(100)
+# stato varchar(100)
 # PRIMARY KEY (user_id))
+
 try:
     conn = sqlite3.connect('cagatori.db')
     cursor = conn.cursor()
@@ -80,99 +85,118 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         LoggingCazzi.log_user_activity(update, "TEXT_MESSAGE", f"Message: {update.message.text[:50]}...")
         if (chat_id == GRUPPO_CACCA) or is_admin(user_id):
-            try:
-                user_message = update.message.text
-                user_id = update.message.from_user.id
+            user_message = update.message.text
+            user_id = update.message.from_user.id
 
-                if user_message.startswith("💩"):
-                    logging.info("Messaggio inizia con 💩.")
+            if user_message.startswith("💩"):
+                logging.info("Messaggio inizia con 💩.")
 
-                    # Preparare dati da mettere nella tabella
+                # Preparare dati da mettere nella tabella
 
-                    # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
-                    cursor.execute("select nome, fuso_orario from cagatori where user_id=?", (user_id,))
-                    dati=cursor.fetchone()
-                    if(not dati):
-                        # await update.message.reply_text("Errore. Probabilmente non sei nel database.")
-                        logging.info("Utente non nel database. Input ignorato.")
-                    else:
-                        chi=dati[0]
+                # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
+                # cursor.execute("select nome, fuso, citta, provincia, regione, stato from cagatori where user_id=?", (user_id,))
+                cursor.execute("select nome, fuso, citta, stato from cagatori where user_id=?", (user_id,))
+                dati=cursor.fetchone()
+                if(not dati):
+                    # await update.message.reply_text("Errore. Probabilmente non sei nel database.")
+                    logging.info("Utente non nel database. Input ignorato.")
+                else:
+                    chi=dati[0]
 
-                        # giorno e ora
+                    # Dati geografici
 
-                        # assumo che nessuno metta il giorno senza mettere l'ora
-                        if f"Ora: " in user_message:
-                            value = user_message.split(f"Ora: ")[1]
-                            ora=re.split(r'[,;\n]+',value)[0]
-                            if f"Giorno: " in user_message:
-                                value = user_message.split(f"Giorno: ")[1]
-                                giorno=re.split(r'[,;\n]+',value)[0]
-                            else:
-                                giorno = update.message.date.date().strftime('%d/%m/%y')
-                        else:
-                            # Fa lo shift in base al fuso orario 
-                            data=update.message.date + timedelta(hours=dati[1])
-                            giorno=data.date().strftime('%d/%m/%y')
-                            ora=data.time().strftime('%H:%M')
+                    fuso=dati[1]
+                    citta=dati[2]
+                    # provincia=dati[3]
+                    # regione=dati[4]
+                    # stato=dati[5]
+                    stato=dati[3]
 
-                        # altri dati, se forniti
-                        if f"Città: " in user_message:
-                            value = user_message.split(f"Città: ")[1]
-                            citta=re.split(r'[,;\n]+',value)[0]
-                        else:
-                            citta=""
-                        if f"Provincia: " in user_message:
-                            value = user_message.split(f"Provincia: ")[1]
-                            provincia=re.split(r'[,;\n]+',value)[0]
-                        else:
-                            provincia=""
-                        if f"Regione: " in user_message:
-                            value = user_message.split(f"Regione: ")[1]
-                            regione=re.split(r'[,;\n]+',value)[0]
-                        else:
-                            regione=""
+                    if f"Città: " in user_message:
+                        value = user_message.split(f"Città: ")[1]
+                        citta=re.split(r'[,;\n]+',value)[0]
+                        if f"Fuso: " in user_message:
+                            value = user_message.split(f"Fuso: ")[1]
+                            fuso=re.split(r'[,;\n]+',value)[0]
+                            if(not is_integer(fuso)):
+                                await update.message.reply_text("Errore: fuso non valido.")
+                                logging.error(f"Errore: fuso non valido. {e}")
+                                return
                         if f"Stato: " in user_message:
                             value = user_message.split(f"Stato: ")[1]
                             stato=re.split(r'[,;\n]+',value)[0]
+                        # if(stato == "Italia"):
+                        #     if f"Provincia: " in user_message:
+                        #         value = user_message.split(f"Provincia: ")[1]
+                        #         provincia=re.split(r'[,;\n]+',value)[0]
+                        #         if f"Regione: " in user_message:
+                        #             value = user_message.split(f"Regione: ")[1]
+                        #             regione=re.split(r'[,;\n]+',value)[0]
+                        # else:
+                        #     provincia=""
+                        #     regione=""
+                        try:
+                            # cursor.execute("update cagatori set citta=?, provincia=?, regione=?, stato=?, fuso=? where user_id=?", (citta, provincia, regione, stato, fuso, user_id))
+                            cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
+                            conn.commit()
+                            # logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Provincia: {provincia}, Regione: {regione}, Stato: {stato}, Fuso: {fuso}")
+                            logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Stato: {stato}, Fuso: {fuso}")
+                        except sqlite3.Error as e:
+                            await update.message.reply_text("Errore: dati non validi.")
+                            logging.error(f"Dati inseriti non validi: {e}")
+                            return
+                            
+                    # giorno e ora
+
+                    # assumo che nessuno metta il giorno senza mettere l'ora
+                    if f"Ora: " in user_message:
+                        value = user_message.split(f"Ora: ")[1]
+                        ora=re.split(r'[,;\n]+',value)[0]
+                        if f"Giorno: " in user_message:
+                            value = user_message.split(f"Giorno: ")[1]
+                            giorno=re.split(r'[,;\n]+',value)[0]
                         else:
-                            stato=""
-                        if f"Altitudine: " in user_message:
-                            value = user_message.split(f"Altitudine: ")[1]
-                            altitudine=re.split(r'[,;\n]+',value)[0]
-                        else:
-                            altitudine=""
-                        if f"Velocità: " in user_message:
-                            value = user_message.split(f"Velocità: ")[1]
-                            velocita=re.split(r'[,;\n]+',value)[0]
-                        else:
-                            velocita=""
+                            giorno = update.message.date.date().strftime('%d/%m/%y')
+                    else:
+                        # Fa lo shift in base al fuso orario 
+                        data=update.message.date + timedelta(hours=fuso)
+                        giorno=data.date().strftime('%d/%m/%y')
+                        ora=data.time().strftime('%H:%M')
 
-                        # Inserimento dati in google spreadsheets
+                    if f"Altitudine: " in user_message:
+                        value = user_message.split(f"Altitudine: ")[1]
+                        altitudine=re.split(r'[,;\n]+',value)[0]
+                    else:
+                        altitudine=""
+                    if f"Velocità: " in user_message:
+                        value = user_message.split(f"Velocità: ")[1]
+                        velocita=re.split(r'[,;\n]+',value)[0]
+                    else:
+                        velocita=""
 
-                        roba=[chi, giorno, ora, citta, provincia, regione, stato, altitudine, velocita]
+                    # Inserimento dati in google spreadsheets
 
-                        logging.info(f"Data da inserire: {roba}")
+                    # roba=[chi, giorno, ora, citta, provincia, regione, stato, altitudine, velocita]
+                    roba=[chi, giorno, ora, citta, stato, altitudine, velocita]
 
-                        success = sheets_handler.append_data(roba)
+                    logging.info(f"Roba da inserire: {roba}")
 
-                        # Se tutto va bene, reagire con "👍"
+                    success = sheets_handler.append_data(roba)
 
-                        if success:
-                            await context.bot.set_message_reaction(
-                                chat_id=update.message.chat_id,
-                                message_id=update.message.message_id,
-                                reaction=[ReactionTypeEmoji("👍")]
-                            )
-                            logging.info(f"Dati cacca salvati")
-                        else:
-                            await update.message.reply_text("Qualcosa è andato storto. Riprova.")
-                            logging.error(f"Dati cacca non salvati.")
-                else:
-                    logging.info(f"Messaggio ricevuto, ma ignorato perché non inizia con 💩.")
+                    # Se tutto va bene, reagire con "👍"
 
-            except Exception as e:
-                logging.error(f"Errore in handle_message: {e}", exc_info=True)
-                await update.message.reply_text("Errore: riprovare.")
+                    if success:
+                        await context.bot.set_message_reaction(
+                            chat_id=update.message.chat_id,
+                            message_id=update.message.message_id,
+                            reaction=[ReactionTypeEmoji("👍")]
+                        )
+                        logging.info(f"Dati cacca salvati")
+                    else:
+                        await update.message.reply_text("Qualcosa è andato storto. Riprova.")
+                        logging.error(f"Dati cacca non salvati.")
+            else:
+                logging.info(f"Messaggio ricevuto, ma ignorato perché non inizia con 💩.")
         else:
             logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         logging.info("-"*50)
@@ -198,6 +222,8 @@ Lista dei comandi:
 /cagatori - Lista tutti i cagatori
 /addadmin - Nomina admin (admin only)
 /rmadmin - Rimuovi admin (admin only)
+/mieidati - Visualizza i propri dati
+/setdato - Aggiorna un proprio dato
         """)
             logging.info("Messaggio di aiuto mandato")
         else:
@@ -214,12 +240,32 @@ async def sintassi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ans=is_admin(user_id)
         if ((chat_id == GRUPPO_CACCA) or ans):
             if(ans or cursor.execute("select user_id from cagatori where user_id=?", (user_id,)).fetchone()):
+#                 await update.message.reply_text("""
+# Sintassi per i messaggi di cacca:
+
+# · Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
+# · Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "Keyword: valore".
+# Le keyword accettate sono: Giorno, Ora, Città, Provincia, Regione, Stato, Altitudine, Velocità (l'altitudine è da considerarsi in metri slm e la velocità in km/h) e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
+# Occhio alle maiuscole! Le keyword non riconosciute saranno ignorate. L'ordine non è importante.
+
+# Esempio che usa ogni campo:
+# "💩
+# Giorno: 03/03/25
+# Ora: 04:20
+# Città: Sale Marasino
+# Provincia: BS
+# Regione: Lombardia
+# Stato: Italia
+# Altitudine: 250
+# Velocità: 340"
+#         """)
+
                 await update.message.reply_text("""
 Sintassi per i messaggi di cacca:
 
 · Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
 · Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "Keyword: valore".
-Le keyword accettate sono: Giorno, Ora, Città, Provincia, Regione, Stato, Altitudine, Velocità, (l'altitudine è da considerarsi in metri slm e la velocità in km/h) e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
+Le keyword accettate sono: Giorno, Ora, Città, Stato, Altitudine, Velocità (l'altitudine è da considerarsi in metri slm e la velocità in km/h) e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
 Occhio alle maiuscole! Le keyword non riconosciute saranno ignorate. L'ordine non è importante.
 
 Esempio che usa ogni campo:
@@ -227,12 +273,11 @@ Esempio che usa ogni campo:
 Giorno: 03/03/25
 Ora: 04:20
 Città: Sale Marasino
-Provincia: BS
-Regione: Lombardia
 Stato: Italia
 Altitudine: 250
 Velocità: 340"
         """)
+
                 logging.info("Mandato messaggio con la sintassi")
             else:
                 await update.message.reply_text("Non sei un cagatore. Fare /join per unirsi.")
@@ -249,26 +294,29 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND", f"args: {context.args}")
         if (is_admin(user_id)):
 
-            # Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso_orario UTC>
+            # Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>
 
-            if (len(context.args)==3 and is_integer(context.args[0]) and is_integer(context.args[2])):
+            # if (len(context.args)==3 and is_integer(context.args[0]) and is_integer(context.args[2])):
+            if (len(context.args)==5 and is_integer(context.args[0]) and is_integer(context.args[2])):
 
                 # Tutto implementato con un bel database sql
 
                 try:
                     user_id=(int)(context.args[0])
                     nome=context.args[1]
-                    fuso_orario=(int)(context.args[2])
-                    cursor.execute("insert into cagatori values (?, ?, ?, 0)", (user_id, nome, fuso_orario)) # Inserisce come non_admin.
-                    await update.message.reply_text(f"Aggiunto il cagatore {nome} con user_id {user_id} e fuso orario {fuso_orario}")
-                    logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id} e fuso orario {fuso_orario}")
+                    fuso=(int)(context.args[2])
+                    citta=context.args[3]
+                    stato=context.args[4]
+                    cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato)) # Inserisce come non_admin.
+                    await update.message.reply_text(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
+                    logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
                     conn.commit()
                 except sqlite3.Error as e:
                     await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id")
                     logging.error(f"Errore nell'inserimento nel database. {e}")
 
             else:
-                await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso_orario UTC>")
+                await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>")
                 logging.info("Spiegata la sintassi di /aggiungi")
         else:
             if(update.effective_chat.id == GRUPPO_CACCA):
@@ -291,24 +339,26 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "JOIN_COMMAND", f"args: {context.args}")
         if ((chat_id == GRUPPO_CACCA) or is_admin(user_id)):
 
-            # Sintassi /join <nome_spreadsheet> <fuso_orario UTC>
+            # Sintassi /join <nome_spreadsheet> <fuso UTC> <città> <stato>
 
-            if (len(context.args)==2 and is_integer(context.args[1])):
+            if (len(context.args)==4 and is_integer(context.args[1])):
 
                 # Tutto implementato con un bel database sql
                 try:
                     user_id = update.message.from_user.id
                     nome=context.args[0]
-                    fuso_orario=(int)(context.args[1])
-                    cursor.execute("insert into cagatori values (?, ?, ?, 0)", (user_id, nome, fuso_orario))
-                    await update.message.reply_text(f"Complementi {nome}! Ora sei anche tu un cagatore! Il tuo fuso orario UTC è {fuso_orario}")
-                    logging.info(f"Aggiunto cagatore {nome} con user_id {nome} e fuso orario {fuso_orario}")
+                    fuso=(int)(context.args[1])
+                    citta=context.args[2]
+                    stato=context.args[3]
+                    cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato))
+                    await update.message.reply_text(f"Complementi {nome}! Ora sei anche tu un cagatore! Il tuo fuso orario UTC è {fuso}, la tua città è {citta} e il tuo stato è {stato}.")
+                    logging.info(f"Aggiunto cagatore {nome} con user_id {nome}, fuso orario {fuso}, città {citta}, stato {stato}.")
                     conn.commit()
                 except sqlite3.Error as e:
-                    await update.message.reply_text("Errore nell'inserimento nel database. Forse sei già nel database o qualcuno ha il tuo stesso nome")
+                    await update.message.reply_text("Errore nell'inserimento nel database. Forse sei già nel database o qualcuno ha il tuo stesso nome.")
                     logging.error(f"Errore nell'inserimento nel database. {e}")
             else:
-                await update.message.reply_text("Sintassi: /join <nome_spreadsheet> <fuso_orario UTC>")
+                await update.message.reply_text("Sintassi: /join <nome_spreadsheet> <fuso UTC> <città> <stato>")
                 logging.info("Spiegata la sintassi di /join")
         else:
             logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
@@ -326,18 +376,20 @@ async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Sintassi: /rimuovi <nome>
 
             if (len(context.args)==1):
-
                 # Tutto implementato con un bel database sql
                 try:
                     nome=context.args[0]
-                    cursor.execute("delete from cagatori where nome=?", (nome,))
-                    await update.message.reply_text(f"Rimosso il cagatore {nome} (oppure già non c'era).")
-                    logging.info(f"Rimosso cagatore {nome} (o già non c'era).")
-                    conn.commit()
+                    if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+                        cursor.execute("delete from cagatori where nome=?", (nome,))
+                        await update.message.reply_text(f"Rimosso il cagatore {nome}.")
+                        logging.info(f"Rimosso cagatore {nome}.")
+                        conn.commit()
+                    else:
+                        await update.message.reply_text(f"Il cagatore {nome} non esiste.")
+                        logging.info(f"Il cagatore {nome} non esiste.")
                 except sqlite3.Error as e:
                     await update.message.reply_text(f"Errore nella rimozione.")
                     logging.error(f"Errore nella rimozione. {e}")
-                
             else:
                 await update.message.reply_text("Sintassi: /rimuovi <nome>")
                 logging.info("Spiegata la sintassi di /rimuovi")
@@ -382,31 +434,72 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         logging.info("-"*50)
 
-# /setfuso
-async def setfuso_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Modifica il fuso orario"""
-    # Sintassi: /setfuso <nuovo_fuso UTC>
+# /setdato
+async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Modifica i propri dati"""
+    # Sintassi: /setdato <keyword> <nuovo_valore>
     if(update.message):
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id
-        LoggingCazzi.log_user_activity(update, "SETFUSO_COMMAND", f"args: {context.args}")
+        LoggingCazzi.log_user_activity(update, "SETDATO_COMMAND", f"args: {context.args}")
         ans=is_admin(user_id)
         if ((chat_id == GRUPPO_CACCA) or ans):
             if(ans or cursor.execute("select user_id from cagatori where user_id=?", (user_id,)).fetchone()):
-                if(len(context.args)==1 and is_integer(context.args[0])):
-                    try:
-                        user_id = update.message.from_user.id
-                        fuso=(int)(context.args[0])
-                        cursor.execute("update cagatori set fuso_orario=? where user_id=?", (fuso, user_id))
-                        await update.message.reply_text(f"Fuso orario aggiornato a UTC {fuso}")
-                        logging.info(f"Fuso orario aggiornato a UTC {fuso}")
+                if(len(context.args)==2):
+                    if context.args[0] == 'Fuso':
+                        if(is_integer(context.args[1])):
+                            fuso=(int)(context.args[1])
+                            cursor.execute("update cagatori set fuso=? where user_id=?", (fuso, user_id))
+                            await update.message.reply_text(f"Fuso orario aggiornato a UTC {fuso}")
+                            logging.info(f"Fuso orario aggiornato a UTC {fuso}")
+                            conn.commit()
+                        else:
+                            await update.message.reply_text("Errore: il secondo argomento non è valido.")
+                            logging.error("Errore: il secondo argomento non è valido.")
+
+                    elif context.args[0] == 'Città':
+                        cursor.execute("update cagatori set citta=? where user_id=?", (context.args[1], user_id))
+                        await update.message.reply_text(f"Città aggiornata a {context.args[1]}")
+                        logging.info(f"Città aggiornata a {context.args[1]}")
                         conn.commit()
-                    except sqlite3.Error as e:
-                        await update.message.reply_text(f"Errore nell'update.")
-                        logging.error(f"Errore. {e}")
+
+                    # elif context.args[0] == 'Provincia':
+                    #     cursor.execute("update cagatori set provincia=? where user_id=?", (context.args[1], user_id))
+                    #     await update.message.reply_text(f"Provincia aggiornata a {context.args[1]}")
+                    #     logging.info(f"Provincia aggiornata a {context.args[1]}")
+                    #     conn.commit()
+
+                    # elif context.args[0] == 'Regione':
+                    #     cursor.execute("update cagatori set regione=? where user_id=?", (context.args[1], user_id))
+                    #     await update.message.reply_text(f"Regione aggiornata a {context.args[1]}")
+                    #     logging.info(f"Regione aggiornata a {context.args[1]}")
+                    #     conn.commit()
+
+                    elif context.args[0] == 'Stato':
+                        # if(context.args[1] == "Italia"):
+                        #     cursor.execute("update cagatori set stato=\'Italia\' where user_id=?", (user_id,))
+                        #     await update.message.reply_text(f"Stato aggiornato a Italia")
+                        #     logging.info(f"Stato aggiornato a Italia")
+                        #     conn.commit()
+                        
+                        # else: # Se lo stato non è Italia, allora resetta provincia e regione
+                        #     cursor.execute("update cagatori set stato=?, provincia=\"\", regione=\"\" where user_id=?", (context.args[1], user_id))
+                        #     await update.message.reply_text(f"Stato aggiornato a {context.args[1]}")
+                        #     logging.info(f"Stato aggiornato a {context.args[1]}")
+                        #     conn.commit()
+                        cursor.execute("update cagatori set stato=? where user_id=?", (context.args[1], user_id))
+                        await update.message.reply_text(f"Stato aggiornato a {context.args[1]}")
+                        logging.info(f"Stato aggiornato a {context.args[1]}")
+                        conn.commit()
+
+                    else:
+                        # await update.message.reply_text("Keyword non riconosciuta. Keyword ammesse: Fuso, Città, Provincia, Regione, Stato")
+                        await update.message.reply_text("Keyword non riconosciuta. Keyword ammesse: Fuso, Città, Stato.")
+                        logging.info("Spiegate le keyword di /setdato")
                 else:
-                    await update.message.reply_text("Sintassi: /setfuso <nuovo_fuso UTC>")
-                    logging.info("Spiegata la sintassi di /setfuso")
+                    # await update.message.reply_text("Sintassi: /setdato <keyword> <nuovo_valore>\nSettare uno stato diverso da \"Italia\" setta provincia e regione automanticamente a \"\"")
+                    await update.message.reply_text("Sintassi: /setdato <keyword> <nuovo_valore>")
+                    logging.info("Spiegata la sintassi di /setdato")
             else:
                 await update.message.reply_text("Non sei un cagatore. Fare /join per unirsi.")
                 logging.info("L'utente non è un cagatore.")
@@ -423,18 +516,17 @@ async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "CAGATORI_COMMAND")
         if (chat_id == GRUPPO_CACCA) or is_admin(user_id):
             try:
-                cursor.execute("select nome, fuso_orario, admin from cagatori")
+                cursor.execute("select nome, fuso, admin, citta, stato from cagatori")
                 messaggio = 'Lista cagatori:\n\n'
                 lista_cagatori=cursor.fetchall()
                 # Si itera su tutti i cagatori
                 for lista in lista_cagatori:
                     if(lista[2]): # Se è admin
-                        messaggio += f"<b>{lista[0]}</b>, Fuso: {lista[1]}\n"
+                        messaggio += f"<b>{lista[0]}</b>   Fuso: {lista[1]}, Città: {lista[3]}, Stato: {lista[4]}\n"
                     else:
-                        messaggio += f"{lista[0]}, Fuso: {lista[1]}\n"
+                        messaggio += f"{lista[0]}   Fuso: {lista[1]}, Città: {lista[3]}, Stato: {lista[4]}\n"
                 await update.message.reply_text(messaggio, parse_mode='HTML') # Per scrivere in grassetto gli admin
                 logging.info("Mandata lista dei cagatori")
-                conn.commit()
             except sqlite3.Error as e:
                 await update.message.reply_text(f"Errore nel recuperare la lista dei cagatori.")
                 logging.error(f"Errore. {e}")
@@ -453,10 +545,14 @@ async def addadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if(len(context.args)==1):
                 try:
                     nome=context.args[0]
-                    cursor.execute("update cagatori set admin=1 where nome=?", (nome,))
-                    await update.message.reply_text(f"Ora {nome} è un admin.")
-                    logging.info(f"Ora {nome} è un admin.")
-                    conn.commit()
+                    if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+                        cursor.execute("update cagatori set admin=1 where nome=?", (nome,))
+                        await update.message.reply_text(f"Ora {nome} è un admin.")
+                        logging.info(f"Ora {nome} è un admin.")
+                        conn.commit()
+                    else:
+                        await update.message.reply_text(f"Il cagatore {nome} non esiste.")
+                        logging.info(f"Il cagatore {nome} non esiste.")
                 except sqlite3.Error as e:
                     await update.message.reply_text(f"Errore.")
                     logging.error(f"Errore. {e}")
@@ -486,10 +582,14 @@ async def rmadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if(len(context.args)==1):
                 try:
                     nome=context.args[0]
-                    cursor.execute("update cagatori set admin=0 where nome=?", (nome,))
-                    await update.message.reply_text(f"Ora {nome} non è un admin")
-                    logging.info(f"Ora {nome} non è un admin")
-                    conn.commit()
+                    if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+                        cursor.execute("update cagatori set admin=0 where nome=?", (nome,))
+                        await update.message.reply_text(f"Ora {nome} non è un admin.")
+                        logging.info(f"Ora {nome} non è un admin.")
+                        conn.commit()
+                    else:
+                        await update.message.reply_text(f"Il cagatore {nome} non esiste.")
+                        logging.info(f"Il cagatore {nome} non esiste.")
                 except sqlite3.Error as e:
                     await update.message.reply_text(f"Errore.")
                     logging.error(f"Errore. {e}")
@@ -506,6 +606,39 @@ async def rmadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logging.info("L'utente non è un cagatore.")
             else:
                 logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
+        logging.info("-"*50)
+
+
+# /mieidati
+async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Visualizza i miei dati"""
+    if(update.message):
+        chat_id = update.effective_chat.id
+        user_id = update.effective_user.id
+        LoggingCazzi.log_user_activity(update, "MIEIDATI_COMMAND")
+        ans=is_admin(user_id)
+        if ((chat_id == GRUPPO_CACCA) or ans):
+            if(ans or cursor.execute("select user_id from cagatori where user_id=?", (user_id,)).fetchone()):
+                try:
+                    # cursor.execute("select nome, admin, fuso, citta, provincia, regione, stato from cagatori where user_id=?", (user_id,))
+                    cursor.execute("select nome, admin, fuso, citta, stato from cagatori where user_id=?", (user_id,))
+                    dati=cursor.fetchone()
+                    if(dati[1]): # Se è admin
+                        messaggio = f"Nome: <b>{dati[0]}</b>\n"
+                    else:
+                        messaggio = f"Nome: {dati[0]}\n"
+                    # messaggio += f"Fuso: {dati[2]}\nCittà: {dati[3]}\nProvincia: {dati[4]}\nRegione: {dati[5]}\nStato: {dati[6]}\n"
+                    messaggio += f"Fuso: {dati[2]}\nCittà: {dati[3]}\nStato: {dati[4]}\n"
+                    await update.message.reply_text(messaggio, parse_mode='HTML') # Per scrivere in grassetto gli admin
+                    logging.info(f"Mandati dati di {dati[0]}")
+                except sqlite3.Error as e:
+                    await update.message.reply_text(f"Errore nel recuperare i dati.")
+                    logging.error(f"Errore. {e}")
+            else:
+                await update.message.reply_text("Non sei un cagatore. Fare /join per unirsi.")
+                logging.info("L'utente non è un cagatore.")
+        else:
+            logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         logging.info("-"*50)
 
 # async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -559,10 +692,12 @@ def main():
 # join - Diventa un cagatore
 # rimuovi - Rimuovi cagatore (admin only)
 # abbandona - Smetti di essere un cagatore
-# setfuso - Aggiorna il tuo fuso orario
+# setdato - Aggiorna un proprio dato
 # cagatori - Lista tutti i cagatori
 # addadmin - Nomina admin (admin only)
 # rmadmin - Rimuovi admin (admin only)
+# mieidati - Visualizza i propri dati
+
 
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("sintassi", sintassi_command))
@@ -570,10 +705,11 @@ def main():
         application.add_handler(CommandHandler("join", join_command))
         application.add_handler(CommandHandler("rimuovi", rimuovi_command))
         application.add_handler(CommandHandler("abbandona", abbandona_command))
-        application.add_handler(CommandHandler("setfuso", setfuso_command))
+        application.add_handler(CommandHandler("setdato", setdato_command))
         application.add_handler(CommandHandler("cagatori", cagatori_command))
         application.add_handler(CommandHandler("addadmin", addadmin_command))
         application.add_handler(CommandHandler("rmadmin", rmadmin_command))
+        application.add_handler(CommandHandler("mieidati", mieidati_command))
         # application.add_handler(CommandHandler("rmcacca", rmcacca_command))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
