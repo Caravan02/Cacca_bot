@@ -49,7 +49,7 @@ class GoogleSheetsHandler:
     def append_data(self, data):
         """Append data to the spreadsheet"""
         try:
-            self.sheet.append_row(data, table_range='A1')
+            self.sheet.append_row(data, table_range='A1', value_input_option="USER_ENTERED") # Non sicuro: un utente potrebbe inserire formule
             self.logger.info(f"Data appended to sheet: {data}")
             return True
         except Exception as e:

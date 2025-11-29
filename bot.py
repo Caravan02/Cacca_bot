@@ -6,7 +6,8 @@ from telegram import Update, ReactionTypeEmoji
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 import re
-from datetime import timedelta 
+from datetime import timedelta, datetime
+from dateutil import parser
 import sqlite3
 
 # Load environment variables from .env file
@@ -66,6 +67,20 @@ def is_integer(s):
         return s[1:].isdigit()
     return s.isdigit()
 
+def is_valid_date(date_string):
+    try:
+        datetime.strptime(date_string, "%d/%m/%y")
+        return True
+    except ValueError:
+        return False
+
+def is_valid_hour(date_string):
+    try:
+        datetime.strptime(date_string, "%H")
+        return True
+    except ValueError:
+        return False
+
 # Comandi Bot
 
 # /start
@@ -112,19 +127,74 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     # stato=dati[5]
                     stato=dati[3]
 
+                    if f"Altitudine: " in user_message:
+                        value = user_message.split(f"Altitudine: ")[1]
+                        altitudine=re.split(r'[,;\n]+',value)[0]
+                        # if(not is_integer(altitudine)):
+                        #     await update.message.reply_text("Errore: altitudine non valida.")
+                        #     logging.error("Errore: altitudine non valida.")
+                        #     return
+                    else:
+                        altitudine=""
+                    if f"Velocità: " in user_message:
+                        value = user_message.split(f"Velocità: ")[1]
+                        velocita=re.split(r'[,;\n]+',value)[0]
+                        # if(not is_integer(velocita)):
+                        #     await update.message.reply_text("Errore: velocità non valida.")
+                        #     logging.error("Errore: velocità non valida.")
+                        #     return
+                    else:
+                        velocita=""
+
+                    # giorno e ora
+
+                    # assumo che nessuno metta il giorno senza mettere l'ora
+                    if f"Ora: " in user_message:
+                        value = user_message.split(f"Ora: ")[1]
+                        ora=re.split(r'[,;\n]+',value)[0]
+                        # if(not is_valid_hour(ora)):
+                        #     await update.message.reply_text("Errore: ora non valida.")
+                        #     logging.error("Errore: ora non valida.")
+                        #     return
+                        if f"Giorno: " in user_message:
+                            value = user_message.split(f"Giorno: ")[1]
+                            giorno=re.split(r'[,;\n]+',value)[0]
+                            # try:
+                            #     parser.parse(giorno)
+                            # except:
+                            # if(not is_valid_date(giorno)):
+                            #     await update.message.reply_text("Errore: giorno non valido.")
+                            #     logging.error("Errore: giorno non valido.")
+                            #     return
+                        else:
+                            giorno = update.message.date.date().strftime('%d/%m/%y')
+                    else:
+                        # Fa lo shift in base al fuso orario 
+                        data=update.message.date + timedelta(hours=fuso)
+                        giorno=data.date().strftime('%d/%m/%y')
+                        ora=data.time().strftime('%H:%M')
+
                     if f"Città: " in user_message:
                         value = user_message.split(f"Città: ")[1]
                         citta=re.split(r'[,;\n]+',value)[0]
+                        if(citta.startswith('=')):
+                            await update.message.reply_text("Bel tentativo...")
+                            logging.error("Errore: Città inizia con '='.")
+                            return
                         if f"Fuso: " in user_message:
                             value = user_message.split(f"Fuso: ")[1]
                             fuso=re.split(r'[,;\n]+',value)[0]
                             if(not is_integer(fuso)):
                                 await update.message.reply_text("Errore: fuso non valido.")
-                                logging.error(f"Errore: fuso non valido. {e}")
+                                logging.error(f"Errore: fuso non valido.")
                                 return
                         if f"Stato: " in user_message:
                             value = user_message.split(f"Stato: ")[1]
                             stato=re.split(r'[,;\n]+',value)[0]
+                            if(stato.startswith('=')):
+                                await update.message.reply_text("Bel tentativo...")
+                                logging.error("Errore: Stato inizia con '='.")
+                                return
                         # if(stato == "Italia"):
                         #     if f"Provincia: " in user_message:
                         #         value = user_message.split(f"Provincia: ")[1]
@@ -138,41 +208,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         try:
                             # cursor.execute("update cagatori set citta=?, provincia=?, regione=?, stato=?, fuso=? where user_id=?", (citta, provincia, regione, stato, fuso, user_id))
                             cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
-                            conn.commit()
                             # logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Provincia: {provincia}, Regione: {regione}, Stato: {stato}, Fuso: {fuso}")
-                            logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Stato: {stato}, Fuso: {fuso}")
                         except sqlite3.Error as e:
                             await update.message.reply_text("Errore: dati non validi.")
                             logging.error(f"Dati inseriti non validi: {e}")
                             return
-                            
-                    # giorno e ora
-
-                    # assumo che nessuno metta il giorno senza mettere l'ora
-                    if f"Ora: " in user_message:
-                        value = user_message.split(f"Ora: ")[1]
-                        ora=re.split(r'[,;\n]+',value)[0]
-                        if f"Giorno: " in user_message:
-                            value = user_message.split(f"Giorno: ")[1]
-                            giorno=re.split(r'[,;\n]+',value)[0]
-                        else:
-                            giorno = update.message.date.date().strftime('%d/%m/%y')
-                    else:
-                        # Fa lo shift in base al fuso orario 
-                        data=update.message.date + timedelta(hours=fuso)
-                        giorno=data.date().strftime('%d/%m/%y')
-                        ora=data.time().strftime('%H:%M')
-
-                    if f"Altitudine: " in user_message:
-                        value = user_message.split(f"Altitudine: ")[1]
-                        altitudine=re.split(r'[,;\n]+',value)[0]
-                    else:
-                        altitudine=""
-                    if f"Velocità: " in user_message:
-                        value = user_message.split(f"Velocità: ")[1]
-                        velocita=re.split(r'[,;\n]+',value)[0]
-                    else:
-                        velocita=""
 
                     # Inserimento dati in google spreadsheets
 
@@ -191,7 +231,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             message_id=update.message.message_id,
                             reaction=[ReactionTypeEmoji("👍")]
                         )
-                        logging.info(f"Dati cacca salvati.")
+                        logging.info(f"Dati cacca salvati,e aggiornati i dati di {chi}: Città: {citta}, Stato: {stato}, Fuso: {fuso}")
+                        conn.commit()
                     else:
                         await update.message.reply_text("Qualcosa è andato storto. Riprova.")
                         logging.error(f"Dati cacca non salvati.")
