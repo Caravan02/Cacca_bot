@@ -6,8 +6,8 @@ from telegram import Update, ReactionTypeEmoji
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from dotenv import load_dotenv
 import re
-from datetime import timedelta, datetime
-from dateutil import parser
+from datetime import timedelta #, datetime
+# from dateutil import parser
 import sqlite3
 
 # Load environment variables from .env file
@@ -67,30 +67,21 @@ def is_integer(s):
         return s[1:].isdigit()
     return s.isdigit()
 
-def is_valid_date(date_string):
-    try:
-        datetime.strptime(date_string, "%d/%m/%y")
-        return True
-    except ValueError:
-        return False
+# def is_valid_date(date_string):
+#     try:
+#         datetime.strptime(date_string, "%d/%m/%y")
+#         return True
+#     except ValueError:
+#         return False
 
-def is_valid_hour(date_string):
-    try:
-        datetime.strptime(date_string, "%H")
-        return True
-    except ValueError:
-        return False
+# def is_valid_hour(date_string):
+#     try:
+#         datetime.strptime(date_string, "%H")
+#         return True
+#     except ValueError:
+#         return False
 
 # Comandi Bot
-
-# /start
-# async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     """/start (attualmente non operativo)."""
-#     chat_id = update.effective_chat.id
-#     user_id = update.effective_user.id
-#     if (chat_id == GRUPPO_CACCA) or is_admin(user_id):
-#         LoggingCazzi.log_user_activity(update, "START_COMMAND")
-    
 
 # Handler dei messaggi - viene eseguito ogni volta che qualcuno scrive un messaggio
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -109,11 +100,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Preparare dati da mettere nella tabella
 
                 # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
-                # cursor.execute("select nome, fuso, citta, provincia, regione, stato from cagatori where user_id=?", (user_id,))
                 cursor.execute("select nome, fuso, citta, stato from cagatori where user_id=?", (user_id,))
                 dati=cursor.fetchone()
                 if(not dati):
-                    # await update.message.reply_text("Errore. Probabilmente non sei nel database.")
                     logging.info("Utente non nel database: input ignorato.")
                 else:
                     chi=dati[0]
@@ -122,9 +111,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     fuso=dati[1]
                     citta=dati[2]
-                    # provincia=dati[3]
-                    # regione=dati[4]
-                    # stato=dati[5]
                     stato=dati[3]
 
                     if f"Altitudine: " in user_message:
@@ -195,20 +181,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 await update.message.reply_text("Bel tentativo...")
                                 logging.error("Errore: Stato inizia con '='.")
                                 return
-                        # if(stato == "Italia"):
-                        #     if f"Provincia: " in user_message:
-                        #         value = user_message.split(f"Provincia: ")[1]
-                        #         provincia=re.split(r'[,;\n]+',value)[0]
-                        #         if f"Regione: " in user_message:
-                        #             value = user_message.split(f"Regione: ")[1]
-                        #             regione=re.split(r'[,;\n]+',value)[0]
-                        # else:
-                        #     provincia=""
-                        #     regione=""
                         try:
-                            # cursor.execute("update cagatori set citta=?, provincia=?, regione=?, stato=?, fuso=? where user_id=?", (citta, provincia, regione, stato, fuso, user_id))
                             cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
-                            # logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Provincia: {provincia}, Regione: {regione}, Stato: {stato}, Fuso: {fuso}")
                         except sqlite3.Error as e:
                             await update.message.reply_text("Errore: dati non validi.")
                             logging.error(f"Dati inseriti non validi: {e}")
@@ -216,7 +190,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     # Inserimento dati in google spreadsheets
 
-                    # roba=[chi, giorno, ora, citta, provincia, regione, stato, altitudine, velocita]
                     roba=[chi, giorno, ora, citta, stato, altitudine, velocita]
 
                     logging.info(f"Roba da inserire: {roba}")
@@ -281,26 +254,6 @@ async def sintassi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ans=is_admin(user_id)
         if ((chat_id == GRUPPO_CACCA) or ans):
             if(ans or cursor.execute("select user_id from cagatori where user_id=?", (user_id,)).fetchone()):
-#                 await update.message.reply_text("""
-# Sintassi per i messaggi di cacca:
-
-# · Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
-# · Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "Keyword: valore".
-# Le keyword accettate sono: Giorno, Ora, Città, Provincia, Regione, Stato, Altitudine, Velocità (l'altitudine è da considerarsi in metri slm e la velocità in km/h) e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
-# Occhio alle maiuscole! Le keyword non riconosciute saranno ignorate. L'ordine non è importante.
-
-# Esempio che usa ogni campo:
-# "💩
-# Giorno: 03/03/25
-# Ora: 04:20
-# Città: Sale Marasino
-# Provincia: BS
-# Regione: Lombardia
-# Stato: Italia
-# Altitudine: 250
-# Velocità: 340"
-#         """)
-
                 await update.message.reply_text("""
 Sintassi per i messaggi di cacca:
 
@@ -327,7 +280,7 @@ Velocità: 340"
             logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         logging.info("-"*50)
 
-# /aggiungi - aggiungi nuovo utente, se c'è già dà errore
+# /aggiungi
 async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Aggiungi cagatore"""
     if(update.message):
@@ -337,7 +290,6 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>
 
-            # if (len(context.args)==3 and is_integer(context.args[0]) and is_integer(context.args[2])):
             if (len(context.args)==5 and is_integer(context.args[0]) and is_integer(context.args[2])):
 
                 # Tutto implementato con un bel database sql
@@ -371,7 +323,7 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         logging.info("-"*50)
 
-# /join - Unisciti alla cacca
+# /join
 async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Joina la cacca"""
     if(update.message):
@@ -406,7 +358,7 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info("-"*50)
 
 
-# /rimuovi - Rimuovi un cagatore
+# /rimuovi
 async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Rimuovi cagatore"""
     if(update.message):
@@ -446,7 +398,7 @@ async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         logging.info("-"*50)
 
-# /abbandona - Abbandona
+# /abbandona
 async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Abbandona la cacca"""
     if(update.message):
@@ -504,41 +456,16 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         logging.info(f"Città aggiornata a {context.args[1]}.")
                         conn.commit()
 
-                    # elif context.args[0] == 'Provincia':
-                    #     cursor.execute("update cagatori set provincia=? where user_id=?", (context.args[1], user_id))
-                    #     await update.message.reply_text(f"Provincia aggiornata a {context.args[1]}")
-                    #     logging.info(f"Provincia aggiornata a {context.args[1]}")
-                    #     conn.commit()
-
-                    # elif context.args[0] == 'Regione':
-                    #     cursor.execute("update cagatori set regione=? where user_id=?", (context.args[1], user_id))
-                    #     await update.message.reply_text(f"Regione aggiornata a {context.args[1]}")
-                    #     logging.info(f"Regione aggiornata a {context.args[1]}")
-                    #     conn.commit()
-
                     elif context.args[0] == 'Stato':
-                        # if(context.args[1] == "Italia"):
-                        #     cursor.execute("update cagatori set stato=\'Italia\' where user_id=?", (user_id,))
-                        #     await update.message.reply_text(f"Stato aggiornato a Italia")
-                        #     logging.info(f"Stato aggiornato a Italia")
-                        #     conn.commit()
-                        
-                        # else: # Se lo stato non è Italia, allora resetta provincia e regione
-                        #     cursor.execute("update cagatori set stato=?, provincia=\"\", regione=\"\" where user_id=?", (context.args[1], user_id))
-                        #     await update.message.reply_text(f"Stato aggiornato a {context.args[1]}")
-                        #     logging.info(f"Stato aggiornato a {context.args[1]}")
-                        #     conn.commit()
                         cursor.execute("update cagatori set stato=? where user_id=?", (context.args[1], user_id))
                         await update.message.reply_text(f"Stato aggiornato a {context.args[1]}.")
                         logging.info(f"Stato aggiornato a {context.args[1]}.")
                         conn.commit()
 
                     else:
-                        # await update.message.reply_text("Keyword non riconosciuta. Keyword ammesse: Fuso, Città, Provincia, Regione, Stato")
                         await update.message.reply_text("Keyword non riconosciuta. Keyword ammesse: Fuso, Città, Stato.")
                         logging.info("Spiegate le keyword di /setdato")
                 else:
-                    # await update.message.reply_text("Sintassi: /setdato <keyword> <nuovo_valore>\nSettare uno stato diverso da \"Italia\" setta provincia e regione automanticamente a \"\"")
                     await update.message.reply_text("Sintassi: /setdato <keyword> <nuovo_valore>")
                     logging.info("Spiegata la sintassi di /setdato")
             else:
@@ -661,14 +588,12 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if ((chat_id == GRUPPO_CACCA) or ans):
             if(ans or cursor.execute("select user_id from cagatori where user_id=?", (user_id,)).fetchone()):
                 try:
-                    # cursor.execute("select nome, admin, fuso, citta, provincia, regione, stato from cagatori where user_id=?", (user_id,))
                     cursor.execute("select nome, admin, fuso, citta, stato from cagatori where user_id=?", (user_id,))
                     dati=cursor.fetchone()
                     if(dati[1]): # Se è admin
                         messaggio = f"Nome: <b>{dati[0]}</b>\n"
                     else:
                         messaggio = f"Nome: {dati[0]}\n"
-                    # messaggio += f"Fuso: {dati[2]}\nCittà: {dati[3]}\nProvincia: {dati[4]}\nRegione: {dati[5]}\nStato: {dati[6]}\n"
                     messaggio += f"Fuso: {dati[2]}\nCittà: {dati[3]}\nStato: {dati[4]}\n"
                     await update.message.reply_text(messaggio, parse_mode='HTML') # Per scrivere in grassetto gli admin
                     logging.info(f"Mandati dati di {dati[0]}")
@@ -704,19 +629,6 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #             await update.message.reply_text("Errore. Probabimente non sei un cagatore.")
 #             logging.error(f"Probabilmente {nome} non è un cagatore.")
 
-# async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     """Logga errori"""
-#     logging.error(f"Exception while handling an update: {context.error}", exc_info=True)
-#     curso
-#     for user_id in ADMINS_USER_ID:
-#         try:
-#             await context.bot.send_message(
-#                 chat_id=user_id,
-#                 text=f"Errore del bot:\n{context.error}"
-#             )
-#         except Exception as e:
-#             logging.error(f"Failed to send error notification to admin: {e}")
-
 def main():
     """Fai partire il bot."""
     try:
@@ -724,7 +636,6 @@ def main():
         application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
         # Add handlers
-        # application.add_handler(CommandHandler("start", start_command))
 
 
 # help - Visualizza questo messaggio
@@ -753,9 +664,6 @@ def main():
         application.add_handler(CommandHandler("mieidati", mieidati_command))
         # application.add_handler(CommandHandler("rmcacca", rmcacca_command))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        
-        # Add error handler
-        # application.add_error_handler(error_handler)
 
         # Start the Bot
         logging.info("Bot partito...")
