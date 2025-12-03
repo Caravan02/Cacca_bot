@@ -113,6 +113,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     citta=dati[2]
                     stato=dati[3]
 
+                    flag = bool(False)
+
                     if f"Altitudine: " in user_message:
                         value = user_message.split(f"Altitudine: ")[1]
                         altitudine=re.split(r'[,;\n]+',value)[0]
@@ -153,7 +155,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             #     logging.error("Errore: giorno non valido.")
                             #     return
                         else:
-                            giorno = update.message.date.date().strftime('%d/%m/%y')
+                            # Per assicurarsi che il giorno sia localizzato.
+                            data=update.message.date + timedelta(hours=fuso)
+                            giorno = data.date().strftime('%d/%m/%y')
                     else:
                         # Fa lo shift in base al fuso orario 
                         data=update.message.date + timedelta(hours=fuso)
@@ -183,6 +187,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 return
                         try:
                             cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
+                            flag = bool(True)
                         except sqlite3.Error as e:
                             await update.message.reply_text("Errore: dati non validi.")
                             logging.error(f"Dati inseriti non validi: {e}")
@@ -204,11 +209,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             message_id=update.message.message_id,
                             reaction=[ReactionTypeEmoji("👍")]
                         )
-                        logging.info(f"Dati cacca salvati,e aggiornati i dati di {chi}: Città: {citta}, Stato: {stato}, Fuso: {fuso}")
+                        
                         conn.commit()
+                        logging.info("Dati cacca salvati.")
+                        if (flag):
+                            logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Stato: {stato}, Fuso: {fuso}")
                     else:
-                        await update.message.reply_text("Qualcosa è andato storto. Riprova.")
-                        logging.error(f"Dati cacca non salvati.")
+                        await update.message.reply_text("Qualcosa è andato storto, e l'input è stato ignorato. Riprova.")
+                        logging.error(f"Dati cacca non salvati, e dati non salvati nel database.")
             else:
                 logging.info(f"Messaggio ricevuto, ma ignorato perché non inizia con 💩.")
         else:
