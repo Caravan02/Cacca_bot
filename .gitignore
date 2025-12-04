@@ -2,7 +2,7 @@
 .env
 
 # Credentials
-credentials/
+Credenziali/
 *.json
 *.p12
 *.key
