@@ -1,24 +1,9 @@
-import os
 import sqlite3
 import logging
 from telegram import Update
-from dotenv import load_dotenv
+import re
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Configuration from environment variables
-# TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-# GOOGLE_SHEETS_CREDENTIALS_FILE = os.getenv('GOOGLE_SHEETS_CREDENTIALS_FILE')
-# SPREADSHEET_URL = os.getenv('SPREADSHEET_URL')
-# WORKSHEET_NAME = os.getenv('WORKSHEET_NAME')
-GRUPPO_CACCA = int(os.getenv('GRUPPO_CACCA'))
-
-# Validate required environment variables
-required_vars = ['GRUPPO_CACCA']
-missing_vars = [var for var in required_vars if not os.getenv(var)]
-if missing_vars:
-    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+from Cazzi.CostantiCazzi import GRUPPO_CACCA
 
 # Funzione per vedere chi è admin
 def is_admin(user_id, cursor: sqlite3.Cursor) -> bool:
@@ -79,17 +64,17 @@ async def check_admin(update: Update, cursor: sqlite3.Cursor) -> bool:
         else:
             logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         
+# Restituisce il giorno nel formato standard se è stato inserito bene (più o meno), None altrimenti. Formato standard: gg/mm/aa
+def valid_day(date_string: str) -> str:
+    if(re.compile(r"^[0-3]\d\/(0\d|1[0-2])\/(\d{2})( )*$").match(date_string)):
+        return date_string[0:9]
+    else:
+        return
 
-# def is_valid_date(date_string):
-#     try:
-#         datetime.strptime(date_string, "%d/%m/%y")
-#         return True
-#     except ValueError:
-#         return False
-
-# def is_valid_hour(date_string):
-#     try:
-#         datetime.strptime(date_string, "%H")
-#         return True
-#     except ValueError:
-#         return False
+# Restituituisce l'ora nel formato standard se è stata inserita in modo sensato, None altrimenti. Formato standard: hh.mm
+def valid_hour(date_string: str) -> str:
+    if(re.compile(r"^([01]\d|2[0-3])[.:][0-5]\d( )*$").match(date_string)):
+        date=date_string[0:5]
+        return date.replace(':', '.')
+    else:
+        return

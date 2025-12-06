@@ -3,18 +3,7 @@ import logging
 from google.oauth2.service_account import Credentials
 import gspread
 
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Configuration from environment variables
-WORKSHEET_NAME = os.getenv('WORKSHEET_NAME')
-# Validate required environment variables
-required_vars = ['WORKSHEET_NAME']
-missing_vars = [var for var in required_vars if not os.getenv(var)]
-if missing_vars:
-    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+from Cazzi.CostantiCazzi import WORKSHEET_NAME
 
 class GoogleSheetsHandler:
     def __init__(self, creds_file, spreadsheet_url):

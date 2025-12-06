@@ -3,21 +3,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from telegram import Update
 
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Configuration from environment variables
-SPREADSHEET_URL = os.getenv('SPREADSHEET_URL')
-WORKSHEET_NAME = os.getenv('WORKSHEET_NAME')
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-
-# Validate required environment variables
-required_vars = ['WORKSHEET_NAME', 'SPREADSHEET_URL']
-missing_vars = [var for var in required_vars if not os.getenv(var)]
-if missing_vars:
-    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+from Cazzi.CostantiCazzi import LOG_LEVEL, SPREADSHEET_URL, WORKSHEET_NAME
 
 # Create logs directory if it doesn't exist
 os.makedirs('logs', exist_ok=True)
