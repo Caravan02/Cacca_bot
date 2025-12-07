@@ -33,6 +33,7 @@ except sqlite3.Error as e:
 # Initialize Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
 
+
 # Comandi Bot
 
 # Handler dei messaggi - viene eseguito ogni volta che qualcuno scrive un messaggio
@@ -53,7 +54,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 cursor.execute("select nome, fuso, citta, stato from cagatori where user_id=?", (user_id,))
                 dati=cursor.fetchone()
                 if(not dati):
-                    logging.info("Utente non nel database: input ignorato.")
+                    logging.warning("Utente non nel database: input ignorato.")
                 else:
 
                     [chi, fuso, citta, stato]=dati
@@ -168,6 +169,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.info(f"Messaggio ricevuto, ma ignorato perché non inizia con 💩.")
         logging.info("-"*50)
 
+
 # /comandi
 async def comandi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manda la lista dei comandi"""
@@ -193,16 +195,17 @@ Lista dei comandi:
             logging.info("Lista dei comandi mandata.")
         logging.info("-"*50)
 
+
 # /help
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manda messaggio di aiuto"""
     if(update.message):
         LoggingCazzi.log_user_activity(update, "HELP_COMMAND")
         if HelpersCazzi.check_gruppo_o_admin(update, cursor):
+            # Messaggio
             await update.message.reply_text("""
 Cosa fare se sei appena entrato nel gruppo:
 - Diventa un cagatore con il comando /join, inserendo i tuoi dati: nome sullo spreadheet, fuso orario, città e stato.
-Esempio: /join Nicola 1 Pisa Italia
                                             
 Come vengono trattati i messaggi di cacca?
 - Se hai fatto /join, i messaggi inviati che iniziano con "💩" saranno contati come cacche, e i dati relativi registrati nello spreadsheet.
@@ -229,6 +232,7 @@ async def sintassi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SINTASSI_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
+            # Messaggio
             await update.message.reply_text("""
 Sintassi per i messaggi di cacca:
 
@@ -250,17 +254,20 @@ Velocità: 340"
             logging.info("Mandato messaggio con la sintassi.")
         logging.info("-"*50)
 
+
 # /aggiungi - Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>
+# C'è il bug degli spazi: non si possono mettere città, nomi o stati con uno spazio.
 async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Aggiungi cagatore"""
     if(update.message):
         LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND", f"args: {context.args}")
+        # Solo admin
         if(await HelpersCazzi.check_admin(update, cursor)):
+            # Controlla il numero di argomenti e che gli argomenti siano validi
             if (len(context.args)==5 and HelpersCazzi.is_integer(context.args[0]) and HelpersCazzi.is_integer(context.args[2]) and not context.args[1].startswith("=") and not context.args[3].startswith("=") and not context.args[4].startswith("=")):
 
-                # Tutto implementato con un bel database sql
-
                 try:
+                    # Inserisce i dati nel database
                     user_id=(int)(context.args[0])
                     nome=context.args[1]
                     fuso=(int)(context.args[2])
@@ -271,39 +278,16 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
                     conn.commit()
                 except sqlite3.Error as e:
+                    # Errore
                     await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id.")
-                    logging.error(f"Errore nell'inserimento nel database: {e}")
+                    logging.warning(f"Errore nell'inserimento nel database: {e}")
 
             else:
+                # Spiega la sintassi
                 await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>")
                 logging.info("Spiegata la sintassi di /aggiungi")
         logging.info("-"*50)
 
-# /join - Sintassi /join <nome_spreadsheet> <fuso UTC> <città> <stato>
-# async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     """Joina la cacca"""
-#     if(update.message):
-#         LoggingCazzi.log_user_activity(update, "JOIN_COMMAND", f"args: {context.args}")
-#         if(HelpersCazzi.check_gruppo_o_admin(update, cursor)):
-#             if (len(context.args)==4 and HelpersCazzi.is_integer(context.args[1])):
-#                 # Tutto implementato con un bel database sql
-#                 try:
-#                     user_id = update.message.from_user.id
-#                     nome=context.args[0]
-#                     fuso=(int)(context.args[1])
-#                     citta=context.args[2]
-#                     stato=context.args[3]
-#                     cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato))
-#                     await update.message.reply_text(f"Complementi {nome}! Ora sei anche tu un cagatore! Il tuo fuso orario UTC è {fuso}, la tua città è {citta} e il tuo stato è {stato}.")
-#                     logging.info(f"Aggiunto cagatore {nome} con user_id {nome}, fuso orario {fuso}, città {citta}, stato {stato}.")
-#                     conn.commit()
-#                 except sqlite3.Error as e:
-#                     await update.message.reply_text("Errore nell'inserimento nel database. Forse sei già nel database o qualcuno ha il tuo stesso nome.")
-#                     logging.error(f"Errore nell'inserimento nel database: {e}")
-#             else:
-#                 await update.message.reply_text("Sintassi: /join <nome_spreadsheet> <fuso UTC (solo numero)> <città> <stato>")
-#                 logging.info("Spiegata la sintassi di /join")
-#         logging.info("-"*50)
 
 # /join
 async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -311,109 +295,126 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_COMMAND")
         if(HelpersCazzi.check_gruppo_o_admin(update, cursor)):
+            # Chiede il nome
             await update.message.reply_text(
                 "Inserisci il tuo nome. Questo è il nome che comaprirà sullo spreadsheet.\n\nFare /annulla in qualsiasi momento per annullare l'operazione."
             )
             return 1
         else:
+            # Termina la conversazione se non è nel gruppo o non è admin
+            logging.info("-"*50)
             return ConversationHandler.END
-    else:
-        logging.info("-"*50)
 
+# Registra il nome e chiede il fuso
 async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_NOME", f"Messaggio: {update.message.text[:50]}")
-        if(not update.message.text.startswith('=')):
-            context.user_data["nome"]=update.message.text
-            await update.message.reply_text(
+        if(not update.message.text.startswith('=')): # Controlla il nome
+            context.user_data["nome"]=update.message.text # Registra il nome
+            await update.message.reply_text( # Chiede il fuso
                 "Inserisci il tuo fuso orario UTC (esempio: +1)."
             )
             return 2
         else:
-            logging.error("Bel tentativo...")
+            logging.warning("Valore inizia con =")
             await update.message.reply_text("Bel tentativo... Riprova.")
-            return 1
+            return 1 # Se non è valido, richiede il nome
 
+# Registra il fuso e chiede la città
 async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_FUSO", f"Messaggio: {update.message.text[:50]}")
         fuso=update.message.text
-        if(HelpersCazzi.is_integer(fuso)):
-            context.user_data["fuso"]=int(fuso)
-            await update.message.reply_text(
+        if(HelpersCazzi.is_integer(fuso)): # Controlla il fuso
+            context.user_data["fuso"]=int(fuso) # Registra il fuso
+            await update.message.reply_text( # Chiede la città
                 "Inserisci la tua città attuale."
             )
             return 3
         else:
             await update.message.reply_text("Errore: fuso non valido. Reinserire il fuso.")
-            logging.error("Il fuso inserito non è valido.")
-            return 2
+            logging.warning("Il fuso inserito non è valido.")
+            return 2 # Se non è valido, richiede il fuso
     
+# Regista la città e chiede lo stato
 async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_CITTA", f"Messaggio: {update.message.text[:50]}")
-        if(not update.message.text.startswith('=')):
-            context.user_data["citta"]=update.message.text
-            await update.message.reply_text(
+        if(not update.message.text.startswith('=')): # Controlla la città
+            context.user_data["citta"]=update.message.text # Registra la città
+            await update.message.reply_text( # Chiede lo stato
                 "Inserisci il tuo stato."
             )
             return 4
         else:
-            logging.error("Bel tentativo...")
+            logging.warning("Valore inizia con =")
             await update.message.reply_text("Bel tentativo... Riprova.")
-            return 3
+            return 3 # Se non è valido, richiede la città
 
+# Chiede lo stato, dopodiché se è valido prende tutti i dati e crea il nuovo cagatore
 async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_STATO", f"Messaggio: {update.message.text[:50]}")
         stato=update.message.text
-        if(not stato.startswith('=')):
+        if(not stato.startswith('=')): # Controlla lo stato
+            # Prende i dati
             user_id=update.message.from_user.id
             nome=context.user_data["nome"]
             fuso=context.user_data["fuso"]
             citta=context.user_data["citta"]
             context.user_data.clear()
             try:
+                # Inserisce i dati nel database
                 cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato))
                 await update.message.reply_text(f"Complementi {nome}! Ora sei anche tu un* cagator*! Il tuo fuso orario UTC è {fuso}, la tua città è {citta} e il tuo stato è {stato}.")
                 logging.info(f"Aggiunto cagatore {nome} con user_id {nome}, fuso orario {fuso}, città {citta}, stato {stato}.")
                 conn.commit()
             except sqlite3.Error as e:
+                # Errore
                 await update.message.reply_text("Errore nell'inserimento nel database. Forse sei già nel database o qualcuno ha il tuo stesso nome.")
-                logging.error(f"Errore nell'inserimento nel database: {e}")
+                logging.warning(f"Errore nell'inserimento nel database: {e}")
             logging.info("-"*50)
             return ConversationHandler.END
         else:
-            logging.error("Bel tentativo...")
+            # Se non è valido, richiede lo stato
+            logging.warning("Bel tentativo...")
             await update.message.reply_text("Bel tentativo... Riprova.")
             return 4
 
+# /annulla - annulla l'operazione di join
 async def join_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "JOIN_ANNULLA")
     await update.message.reply_text("Operazione annullata.")
-    context.user_data.clear()
+    context.user_data.clear() # Pulisce i dati salvati precedentemente
     logging.info("Operazione annullata.")
     logging.info("-"*50)
     return ConversationHandler.END
 
+
 # /rimuovi - Sintassi: /rimuovi <nome>
+# C'è il bug degli spazi: non si può inserire un nome con degli spazi
 async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Rimuovi cagatore"""
     if(update.message):
         LoggingCazzi.log_user_activity(update, "RIMUOVI_COMMAND", f"args: {context.args}")
+        # Solo admin
         if(await HelpersCazzi.check_admin(update, cursor)):
+            # Controlla il numero di argomenti
             if (len(context.args)==1):
                 # Tutto implementato con un bel database sql
                 try:
                     nome=context.args[0]
+                    # Controlla che il cagatore esista
                     if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+                        # Rimuove dal database
                         cursor.execute("delete from cagatori where nome=?", (nome,))
                         await update.message.reply_text(f"Rimosso il cagatore {nome}.")
                         logging.info(f"Rimosso cagatore {nome}.")
                         conn.commit()
                     else:
+                        # Errore
                         await update.message.reply_text(f"Il cagatore {nome} non esiste.")
-                        logging.info(f"Il cagatore {nome} non esiste.")
+                        logging.warning(f"Il cagatore {nome} non esiste.")
                 except sqlite3.Error as e:
                     await update.message.reply_text(f"Errore nella rimozione.")
                     logging.error(f"Errore nella rimozione: {e}")
@@ -422,23 +423,6 @@ async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.info("Spiegata la sintassi di /rimuovi")
         logging.info("-"*50)
 
-# /abbandona - Sintassi: /abbandona
-# async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     """Abbandona la cacca"""
-#     if(update.message):
-#         LoggingCazzi.log_user_activity(update, "ABBANDONA_COMMAND")
-#         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
-#             try:
-#                 user_id = update.message.from_user.id
-#                 cursor.execute("delete from cagatori where user_id=?", (user_id,))
-#                 await update.message.reply_text(f"Addio, ci mancherai! 😢")
-#                 logging.info(f"Il cagatore {user_id} se n'è andato e non ritorna più.")
-#                 conn.commit()
-#             except sqlite3.Error as e:
-#                 await update.message.reply_text(f"Errore nella rimozione.")
-#                 logging.error(f"Errore nella rimozione: {e}")
-#         logging.info("-"*50)
-
 # /abbandona
 async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Abbandona la cacca"""
@@ -446,8 +430,10 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "ABBANDONA_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
             
+            # Tastiera con le opzioni
             keyboard=[["Sì", "No"]]
 
+            # Chiede conferma
             await update.message.reply_text(
                 "Vuoi davvero uscire dal database? Le tue cacche non verranno più registrate.",
                 reply_markup=ReplyKeyboardMarkup(
@@ -460,73 +446,123 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return ConversationHandler.END
     logging.info("-"*50)
 
+# Se dice sì, abbandona
 async def abbandona_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "ABBANDONA_SI")
     try:
+        # Rimuovi dal database
         user_id = update.message.from_user.id
         cursor.execute("delete from cagatori where user_id=?", (user_id,))
-        await update.message.reply_text(f"Addio, ci mancherai! 😢", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text(f"Addio, ci mancherai! 😢", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
         logging.info(f"Il cagatore {user_id} se n'è andato e non ritorna più.")
         conn.commit()
     except sqlite3.Error as e:
-        await update.message.reply_text(f"Errore nella rimozione.", reply_markup=ReplyKeyboardRemove())
+        # Errore
+        await update.message.reply_text(f"Errore nella rimozione.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
         logging.error(f"Errore nella rimozione: {e}")
     logging.info("-"*50)
     return ConversationHandler.END
 
+# Annulla
 async def abbandona_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    LoggingCazzi.log_user_activity(update, "ABBANDONA_ANNULLA", f"Messaggio:{update.message.text[:50]}")
-    await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove())
+    LoggingCazzi.log_user_activity(update, "ABBANDONA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
+    await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
     logging.info("Operazione annullata.")
     logging.info("-"*50)
     return ConversationHandler.END
 
-# /setdato - Sintassi: /setdato <keyword> <nuovo_valore>
+
+# /setdato
 async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Modifica i propri dati"""
     if(update.message):
-        LoggingCazzi.log_user_activity(update, "SETDATO_COMMAND", f"args: {context.args}")
+        LoggingCazzi.log_user_activity(update, "SETDATO_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
-            if(len(context.args)==2):
-                user_id = update.message.from_user.id
-                if context.args[0] == 'Fuso':
-                    if(HelpersCazzi.is_integer(context.args[1])):
-                        fuso=(int)(context.args[1])
-                        cursor.execute("update cagatori set fuso=? where user_id=?", (fuso, user_id))
-                        await update.message.reply_text(f"Fuso orario aggiornato a UTC {fuso}.")
-                        logging.info(f"Fuso orario aggiornato a UTC {fuso}.")
-                        conn.commit()
-                    else:
-                        await update.message.reply_text("Errore: il secondo argomento non è valido.")
-                        logging.error("Errore: il secondo argomento non è valido.")
+            # Tastiera con le opzioni
+            keyboard=[["Fuso", "Città", "Stato", "Annulla"]]
 
-                elif context.args[0] == 'Città':
-                    if(not context.args[1].startswith('=')):
-                        cursor.execute("update cagatori set citta=? where user_id=?", (context.args[1], user_id))
-                        await update.message.reply_text(f"Città aggiornata a {context.args[1]}.")
-                        logging.info(f"Città aggiornata a {context.args[1]}.")
-                        conn.commit()
-                    else:
-                        logging.error("Bel tentativo...")
-                        await update.message.reply_text("Bel tentativo... Riprova.")
+            # Chiede dato da cambiare
+            await update.message.reply_text(
+                "Quale dato vuoi cambiare?\n\nScrivi /annulla in qualsiasi momento per annullare.",
+                reply_markup=ReplyKeyboardMarkup(
+                    keyboard, one_time_keyboard=True
+                ),
+            )
+            return 1
+        else:
+            logging.info("-"*50)
+            return ConversationHandler.END
 
-                elif context.args[0] == 'Stato':
-                    if(not context.args[1].startswith('=')):
-                        cursor.execute("update cagatori set stato=? where user_id=?", (context.args[1], user_id))
-                        await update.message.reply_text(f"Stato aggiornato a {context.args[1]}.")
-                        logging.info(f"Stato aggiornato a {context.args[1]}.")
-                        conn.commit()
-                    else:
-                        logging.error("Bel tentativo...")
-                        await update.message.reply_text("Bel tentativo... Riprova.")
+# Salva l'opzione, e chiede il nuovo valore
+async def setdato_dato(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SETDATO_DATO", f"Messaggio: {update.message.text}")
+        context.user_data["dato"]=update.message.text # Salva l'opzione
+        await update.message.reply_text( # Chiede il nuovo valore
+            "Scrivi il nuovo valore.", reply_markup=ReplyKeyboardRemove()
+        )
+        return 2
 
-                else:
-                    await update.message.reply_text("Keyword non riconosciuta. Keyword ammesse: Fuso, Città, Stato.")
-                    logging.info("Spiegate le keyword di /setdato")
+# Salva il nuovo valore, e lo cambia se è valido
+async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SETDATO_CAMBIA", f"Messaggio: {update.message.text}")
+        # Prende le informazioni
+        user_id=update.message.from_user.id
+        dato=context.user_data["dato"]
+        roba=update.message.text
+        if dato == 'Fuso':
+            # Controlla fuso
+            if(HelpersCazzi.is_integer(roba)): # Controlla validità
+                # Aggiorna dato
+                fuso=(int)(roba)
+                cursor.execute("update cagatori set fuso=? where user_id=?", (fuso, user_id))
+                await update.message.reply_text(f"Fuso orario aggiornato a UTC {fuso}.")
+                logging.info(f"Fuso orario aggiornato a UTC {fuso}.")
+                conn.commit()
             else:
-                await update.message.reply_text("Sintassi: /setdato <keyword> <nuovo_valore>.\nKeyword ammesse: Fuso, Città, Stato.")
-                logging.info("Spiegata la sintassi di /setdato")
+                # Errore
+                await update.message.reply_text("Errore: fuso non valido. Riprova")
+                logging.warning("Errore: fuso non valido. Riprova.")
+                return 2
+
+        elif dato == 'Città':
+            if(not roba.startswith('=')): # Controlla validità
+                # Aggiorna dato
+                cursor.execute("update cagatori set citta=? where user_id=?", (roba, user_id))
+                await update.message.reply_text(f"Città aggiornata a {roba}.")
+                logging.info(f"Città aggiornata a {roba}.")
+                conn.commit()
+            else:
+                # Errore
+                logging.warning("Valore inizia con =")
+                await update.message.reply_text("Bel tentativo... Riprova.")
+                return 2
+
+        else: # dato == 'Stato'
+            if(not roba.startswith('=')): # Controlla validità
+                # Aggiorna dato
+                cursor.execute("update cagatori set stato=? where user_id=?", (roba, user_id))
+                await update.message.reply_text(f"Stato aggiornato a {roba}.")
+                logging.info(f"Stato aggiornato a {roba}.")
+                conn.commit()
+            else:
+                # Errore
+                logging.warning("Valore inizia con =")
+                await update.message.reply_text("Bel tentativo... Riprova.")
+                return 2
+
+        context.user_data.clear() # Pulisce i dati raccolti
         logging.info("-"*50)
+        return ConversationHandler.END
+
+# /annulla
+async def setdato_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    LoggingCazzi.log_user_activity(update, "SETDATO_ANNULLA", f"Messaggio: {update.message.text[:50]}")
+    await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fa sparire la tastiera
+    logging.info("Operazione annullata.")
+    logging.info("-"*50)
+    return ConversationHandler.END
 
 # /cagatori
 async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -535,6 +571,7 @@ async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "CAGATORI_COMMAND")
         if(HelpersCazzi.check_gruppo_o_admin(update, cursor)):
             try:
+                # Prende dati di tutti i cagatori
                 cursor.execute("select nome, fuso, admin, citta, stato from cagatori")
                 messaggio = 'Lista cagatori:\n\n'
                 lista_cagatori=cursor.fetchall()
@@ -547,6 +584,7 @@ async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(messaggio, parse_mode='HTML') # Per scrivere in grassetto gli admin
                 logging.info("Mandata lista dei cagatori.")
             except sqlite3.Error as e:
+                # Errore
                 await update.message.reply_text(f"Errore nel recuperare la lista dei cagatori.")
                 logging.error(f"Errore: {e}")
         logging.info("-"*50)
@@ -556,19 +594,23 @@ async def addadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Nomina admin"""
     if(update.message):
         LoggingCazzi.log_user_activity(update, "ADDADMIN_COMMAND", f"args: {context.args}")
+        # Solo admin
         if(await HelpersCazzi.check_admin(update, cursor)):
             if(len(context.args)==1):
                 try:
                     nome=context.args[0]
                     if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+                        # Aggiunge admin
                         cursor.execute("update cagatori set admin=1 where nome=?", (nome,))
                         await update.message.reply_text(f"Ora {nome} è un admin.")
                         logging.info(f"Ora {nome} è un admin.")
                         conn.commit()
                     else:
+                        # Nome non trovato
                         await update.message.reply_text(f"Il cagatore {nome} non esiste.")
-                        logging.info(f"Il cagatore {nome} non esiste.")
+                        logging.warning(f"Il cagatore {nome} non esiste.")
                 except sqlite3.Error as e:
+                    # Errore
                     await update.message.reply_text(f"Errore.")
                     logging.error(f"Errore. {e}")
             else:
@@ -581,19 +623,23 @@ async def rmadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Rimuovi admin"""
     if(update.message):
         LoggingCazzi.log_user_activity(update, "RMADMIN_COMMAND", f"args: {context.args}")
+        # Solo admin
         if(await HelpersCazzi.check_admin(update, cursor)):
             if(len(context.args)==1):
                 try:
                     nome=context.args[0]
                     if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+                        # Toglie admin
                         cursor.execute("update cagatori set admin=0 where nome=?", (nome,))
                         await update.message.reply_text(f"Ora {nome} non è un admin.")
                         logging.info(f"Ora {nome} non è un admin.")
                         conn.commit()
                     else:
+                        # Nome non trovato
                         await update.message.reply_text(f"Il cagatore {nome} non esiste.")
-                        logging.info(f"Il cagatore {nome} non esiste.")
+                        logging.warning(f"Il cagatore {nome} non esiste.")
                 except sqlite3.Error as e:
+                    # Errore
                     await update.message.reply_text(f"Errore.")
                     logging.error(f"Errore: {e}")
             else:
@@ -609,6 +655,7 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "MIEIDATI_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
             try:
+                # Prende i dati del cagatore
                 user_id = update.message.from_user.id
                 cursor.execute("select nome, admin, fuso, citta, stato from cagatori where user_id=?", (user_id,))
                 dati=cursor.fetchone()
@@ -620,6 +667,7 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(messaggio, parse_mode='HTML') # Per scrivere in grassetto gli admin
                 logging.info(f"Mandati dati di {dati[0]}")
             except sqlite3.Error as e:
+                # Errore
                 await update.message.reply_text(f"Errore nel recuperare i dati.")
                 logging.error(f"Errore. {e}")
         logging.info("-"*50)
@@ -672,7 +720,6 @@ def main():
         application.add_handler(CommandHandler("comandi", comandi_command))
         application.add_handler(CommandHandler("sintassi", sintassi_command))
         application.add_handler(CommandHandler("aggiungi", aggiungi_command))
-        # application.add_handler(CommandHandler("join", join_command))
         application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("join", join_command)],
             states={
@@ -687,11 +734,19 @@ def main():
         application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("abbandona", abbandona_command)],
             states={
-                1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si), MessageHandler(filters.TEXT & ~filters.Regex("^Sì$"), abbandona_annulla)],
+                1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si), MessageHandler(filters.TEXT, abbandona_annulla)],
             },
             fallbacks=[],
         ))
-        application.add_handler(CommandHandler("setdato", setdato_command))
+        # application.add_handler(CommandHandler("setdato", setdato_command))
+        application.add_handler(ConversationHandler(
+            entry_points=[CommandHandler("setdato", setdato_command)],
+            states={
+                1: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_annulla)],
+                2: [MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_cambia)]
+            },
+            fallbacks=[CommandHandler("annulla", setdato_annulla)]
+        ))
         application.add_handler(CommandHandler("cagatori", cagatori_command))
         application.add_handler(CommandHandler("addadmin", addadmin_command))
         application.add_handler(CommandHandler("rmadmin", rmadmin_command))

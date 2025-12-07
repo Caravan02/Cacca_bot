@@ -28,7 +28,7 @@ def check_gruppo_o_admin(update: Update, cursor: sqlite3.Cursor) -> bool:
     if (chat_id == GRUPPO_CACCA) or is_admin(user_id, cursor):
         return True
     else:
-        logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
+        logging.warning("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         return False
 
 # Controlla se l'utente è in GRUPPO_CACCA ed è all'interno del database, oppure se è un admin (che implica essere nel database)
@@ -41,10 +41,10 @@ async def check_cagatore_o_admin(update: Update, cursor: sqlite3.Cursor) -> bool
             return True
         else:
             await update.message.reply_text("Non sei un cagatore. Fare /join per unirsi.")
-            logging.info("L'utente non è un cagatore.")
+            logging.warning("L'utente non è un cagatore.")
             return False
     else:
-        logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
+        logging.warning("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
 
 # Controlla se l'utente è un admin (True), se non lo è ma è un cagatore, oppure se non è un cagatore (False), e manda un messaggio diverso nei tre casi.
 async def check_admin(update: Update, cursor: sqlite3.Cursor) -> bool:
@@ -55,14 +55,14 @@ async def check_admin(update: Update, cursor: sqlite3.Cursor) -> bool:
         if(update.effective_chat.id == GRUPPO_CACCA):
             if(cursor.execute("select user_id from cagatori where user_id=?", (user_id,)).fetchone()):
                 await update.message.reply_text("Errore: non sei un admin.")
-                logging.info("L'utente non è un admin.")
+                logging.warning("L'utente non è un admin.")
                 return 1  # Cagatore
             else:
                 await update.message.reply_text("Non sei un cagatore. Fare /join per unirsi.")
-                logging.info("L'utente non è un cagatore.")
+                logging.warning("L'utente non è un cagatore.")
                 return -1 # Non cagatore
         else:
-            logging.info("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
+            logging.warning("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         
 # Restituisce il giorno nel formato standard se è stato inserito bene (più o meno), None altrimenti. Formato standard: gg/mm/aa
 def valid_day(date_string: str) -> str:
