@@ -94,8 +94,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             logging.error("Errore: ora non valida.")
                             return
 
-                        if(re.search("ora: ", user_message, re.IGNORECASE)):
-                            value = re.split("ora: ", user_message, flags=re.IGNORECASE)[1]
+                        if(re.search("giorno: ", user_message, re.IGNORECASE)):
+                            value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
                             giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
                             print(giorno)
                             if(not giorno):
