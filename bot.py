@@ -439,7 +439,7 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 "Vuoi davvero uscire dal database? Le tue cacche non verranno più registrate.",
                 reply_markup=ReplyKeyboardMarkup(
-                    keyboard, one_time_keyboard=True
+                    keyboard, one_time_keyboard=True, resize_keyboard=True
                 ),
             )
             return 1
@@ -481,13 +481,13 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "SETDATO_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
             # Tastiera con le opzioni
-            keyboard=[["Fuso", "Città", "Stato", "Annulla"]]
+            keyboard=[["Fuso", "Città"], ["Stato", "Annulla"]]
 
             # Chiede dato da cambiare
             await update.message.reply_text(
                 "Quale dato vuoi cambiare?\n\nScrivi /annulla in qualsiasi momento per annullare.",
                 reply_markup=ReplyKeyboardMarkup(
-                    keyboard, one_time_keyboard=True
+                    keyboard, one_time_keyboard=True, resize_keyboard=True
                 ),
             )
             return 1
