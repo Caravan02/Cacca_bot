@@ -62,8 +62,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     # Per controllare se i dati sono stati aggiornati nel database.
                     flag = bool(False)
 
-                    if f"Altitudine: " in user_message:
-                        value = user_message.split(f"Altitudine: ")[1]
+                    # Le keywords sono ora case insensitive
+                    # if f"altitudine: " in user_message:
+                    if(re.search("altitudine: ", user_message, re.IGNORECASE)):
+                        value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
                         altitudine=re.split(r'[,;\n]+',value)[0]
                         if(not altitudine.isdigit()):
                             await update.message.reply_text("Errore: altitudine non valida.")
@@ -71,8 +73,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             return
                     else:
                         altitudine=""
-                    if f"Velocità: " in user_message:
-                        value = user_message.split(f"Velocità: ")[1]
+                    if(re.search("velocità: ", user_message, re.IGNORECASE)):
+                        value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
                         velocita=re.split(r'[,;\n]+',value)[0]
                         if(not velocita.isdigit()):
                             await update.message.reply_text("Errore: velocità non valida.")
@@ -84,16 +86,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     # giorno e ora
 
                     # assumo che nessuno metta il giorno senza mettere l'ora
-                    if f"Ora: " in user_message:
-                        value = user_message.split(f"Ora: ")[1]
+                    if(re.search("ora: ", user_message, re.IGNORECASE)):
+                        value = re.split("ora: ", user_message, flags=re.IGNORECASE)[1]
                         ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
                         if(not ora):
                             await update.message.reply_text("Errore: ora non valida.")
                             logging.error("Errore: ora non valida.")
                             return
 
-                        if f"Giorno: " in user_message:
-                            value = user_message.split(f"Giorno: ")[1]
+                        if(re.search("ora: ", user_message, re.IGNORECASE)):
+                            value = re.split("ora: ", user_message, flags=re.IGNORECASE)[1]
                             giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
                             print(giorno)
                             if(not giorno):
@@ -110,23 +112,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         giorno=data.date().strftime('%d/%m/%y')
                         ora=data.time().strftime('%H.%M')
 
-                    if f"Città: " in user_message:
-                        value = user_message.split(f"Città: ")[1]
+                    if(re.search("città: ", user_message, re.IGNORECASE)):
+                        value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
                         citta=re.split(r'[,;\n]+',value)[0]
                         # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
                         if(citta.startswith('=')):
                             await update.message.reply_text("Bel tentativo...")
                             logging.error("Errore: Città inizia con '='.")
                             return
-                        if f"Fuso: " in user_message:
-                            value = user_message.split(f"Fuso: ")[1]
+                        if(re.search("fuso: ", user_message, re.IGNORECASE)):
+                            value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
                             fuso=re.split(r'[,;\n]+',value)[0]
                             if(not HelpersCazzi.is_integer(fuso)):
                                 await update.message.reply_text("Errore: fuso non valido.")
                                 logging.error(f"Errore: fuso non valido.")
                                 return
-                        if f"Stato: " in user_message:
-                            value = user_message.split(f"Stato: ")[1]
+                        if(re.search("stato: ", user_message, re.IGNORECASE)):
+                            value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
                             stato=re.split(r'[,;\n]+',value)[0]
                             # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
                             if(stato.startswith('=')):
@@ -237,18 +239,18 @@ async def sintassi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Sintassi per i messaggi di cacca:
 
 · Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
-· Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "Keyword: valore".
+· Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "keyword: valore".
 Le keyword accettate sono: Giorno, Ora, Città, Stato, Altitudine, Velocità (l'altitudine è da considerarsi in metri slm e la velocità in km/h) e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
-Occhio alle maiuscole! Le keyword non riconosciute saranno ignorate. L'ordine non è importante.
+Le keyword sono case-insensitive. Le keyword non riconosciute saranno ignorate. L'ordine non è importante.
 
 Esempio che usa ogni campo:
 "💩
-Giorno: 03/03/25
-Ora: 04.20
+giorno: 03/03/25
+ORA: 04.20
 Città: Sale Marasino
-Stato: Italia
-Altitudine: 250
-Velocità: 340"
+StAtO: Italia
+altituDINE: 250
+VELOcità: 340"
     """)
 
             logging.info("Mandato messaggio con la sintassi.")
