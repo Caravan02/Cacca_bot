@@ -14,7 +14,7 @@ LoggingCazzi.setup_logging()
 # Connessione al database
 # CREATE TABLE cagatori(
 # user_id int NOT NULL,
-# nome varchar(100) NOT NULL UNIQUE, 
+# nome varchar(100) NOT NULL UNIQUE,
 # fuso int NOT NULL,
 # admin bool NOT NULL DEFAULT 0,
 # citta varchar(100)
@@ -107,7 +107,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             data=update.message.date + timedelta(hours=fuso)
                             giorno = data.date().strftime('%d/%m/%y')
                     else:
-                        # Fa lo shift in base al fuso orario 
+                        # Fa lo shift in base al fuso orario
                         data=update.message.date + timedelta(hours=fuso)
                         giorno=data.date().strftime('%d/%m/%y')
                         ora=data.time().strftime('%H.%M')
@@ -159,7 +159,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             message_id=update.message.message_id,
                             reaction=[ReactionTypeEmoji("👍")]
                         )
-                        
+
                         conn.commit()
                         logging.info("Dati cacca salvati.")
                         if (flag):
@@ -188,11 +188,11 @@ Lista dei comandi:
 /join - Diventa un cagatore
 /rimuovi - Rimuovi cagatore (admin only)
 /abbandona - Smetti di essere un cagatore
+/setdato - Aggiorna un proprio dato
 /cagatori - Lista tutti i cagatori
 /addadmin - Nomina admin (admin only)
 /rmadmin - Rimuovi admin (admin only)
 /mieidati - Visualizza i propri dati
-/setdato - Aggiorna un proprio dato
         """)
             logging.info("Lista dei comandi mandata.")
         logging.info("-"*50)
@@ -208,21 +208,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("""
 Cosa fare se sei appena entrato nel gruppo:
 - Diventa un cagatore con il comando /join, inserendo i tuoi dati: nome sullo spreadheet, fuso orario, città e stato.
-                                            
+
 Come vengono trattati i messaggi di cacca?
 - Se hai fatto /join, i messaggi inviati che iniziano con "💩" saranno contati come cacche, e i dati relativi registrati nello spreadsheet.
 - Le informazioni base registrate con ogni cacca sono: il vostro nome, il giorno e l'ora (localizzati in base al vostro fuso orario), la città e lo stato in cui siete.
 - Di base, cioè quando il messaggio è "💩", per capire giorno e ora vengono utilizzate la data e l'ora a cui avete inviato il messaggio, aggiustate con il fuso orario memorizzato, e per la città e lo stato vengono inseriti i valori memorizzati nel database.
 - Il messaggio base può essere esteso con unteriori informazioni: vedere /sintassi per informazioni su come fare.
 - Se nel messaggio vengono specificati fuso, città o stato, questi verranno memorizzati nel database, e diventeranno i nuovi valori di default (quindi la prossima volta che non specificherete una di queste informazioni, verrà usato questo valore).
-- Per modificare i dati senza mandare una cacca, usare /setdato (anche se questa opzione è sconsigliata, e ha un bug attualmente).
+- Per modificare i dati senza mandare una cacca, usare /setdato.
 - Per visualizzare i propri dati attuali, usare il comando /mieidati.
-                                            
+
 Altre cose:
 - /comandi manda una lista di tutti i comandi disponibili.
 - /abbandona permette di essere rimosso dal database, e le proprie cacche non verranno più contate.
-- /cagatori manda una lista di tutti i cagatori (cioè gli utenti inseriti nel database)
-                                            
+- /cagatori manda una lista di tutti i cagatori (cioè gli utenti inseriti nel database).
+
         """)
             logging.info("Messaggio di aiuto mandato.")
         logging.info("-"*50)
@@ -337,7 +337,7 @@ async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Errore: fuso non valido. Reinserire il fuso.")
             logging.warning("Il fuso inserito non è valido.")
             return 2 # Se non è valido, richiede il fuso
-    
+
 # Regista la città e chiede lo stato
 async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
@@ -431,7 +431,7 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "ABBANDONA_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
-            
+
             # Tastiera con le opzioni
             keyboard=[["Sì", "No"]]
 
@@ -740,7 +740,6 @@ def main():
             },
             fallbacks=[],
         ))
-        # application.add_handler(CommandHandler("setdato", setdato_command))
         application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("setdato", setdato_command)],
             states={
@@ -759,7 +758,7 @@ def main():
         # Start the Bot
         logging.info("Bot partito...")
         application.run_polling()
-        
+
     except Exception as e:
         logging.critical(f"Errore: bot non partito: {e}", exc_info=True)
         raise
