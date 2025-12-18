@@ -56,13 +56,14 @@ async def check_admin(update: Update, cursor: sqlite3.Cursor) -> bool:
             if(cursor.execute("select user_id from cagatori where user_id=?", (user_id,)).fetchone()):
                 await update.message.reply_text("Errore: non sei un admin.")
                 logging.warning("L'utente non è un admin.")
-                return 1  # Cagatore
+                # return 1  # Cagatore
             else:
                 await update.message.reply_text("Non sei un cagatore. Fare /join per unirsi.")
                 logging.warning("L'utente non è un cagatore.")
-                return -1 # Non cagatore
+                # return -1 # Non cagatore
         else:
             logging.warning("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
+        return False # Non admin
         
 # Restituisce il giorno nel formato standard se è stato inserito bene (più o meno), None altrimenti. Formato standard: gg/mm/aa
 def valid_day(date_string: str) -> str:
