@@ -4,6 +4,7 @@ from telegram.ext import Application, CommandHandler, ConversationHandler, Messa
 import re
 from datetime import timedelta
 import sqlite3
+from time import sleep
 
 from Cazzi import LoggingCazzi, GoogleSheetsCazzi, HelpersCazzi
 from Cazzi.CostantiCazzi import GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL, TELEGRAM_BOT_TOKEN
@@ -29,6 +30,7 @@ try:
     logging.info("Connesso al database.")
 except sqlite3.Error as e:
     logging.error(f"Errore nella connessione al database: {e}")
+    raise
 
 # Initialize Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
@@ -37,139 +39,309 @@ sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS
 # Comandi Bot
 
 # Handler dei messaggi - viene eseguito ogni volta che qualcuno scrive un messaggio
+# async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     """Gestione dei messaggi"""
+#     if(update.message):
+#         LoggingCazzi.log_user_activity(update, "CACCA", f"Messaggio: {update.message.text[:50]}...")
+#         if (HelpersCazzi.check_gruppo_o_admin(update, cursor)):
+#             user_message = update.message.text
+#             user_id = update.message.from_user.id
+
+#             # Preparare dati da mettere nella tabella
+
+#             # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
+#             cursor.execute("select nome, fuso, citta, stato from cagatori where user_id=?", (user_id,))
+#             dati=cursor.fetchone()
+#             if(not dati):
+#                 logging.warning("Utente non nel database: input ignorato.")
+#             else:
+
+#                 [chi, fuso, citta, stato]=dati
+
+#                 # Per controllare se i dati sono stati aggiornati nel database.
+#                 flag = bool(False)
+
+#                 # Le keywords sono ora case insensitive
+#                 # if f"altitudine: " in user_message:
+#                 if(re.search("altitudine: ", user_message, re.IGNORECASE)):
+#                     value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
+#                     altitudine=re.split(r'[,;\n]+',value)[0]
+#                     if(not altitudine.isdigit()):
+#                         await update.message.reply_text("Errore: altitudine non valida.")
+#                         logging.error("Errore: altitudine non valida.")
+#                         raise
+#                 else:
+#                     altitudine=""
+#                 if(re.search("velocità: ", user_message, re.IGNORECASE)):
+#                     value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
+#                     velocita=re.split(r'[,;\n]+',value)[0]
+#                     if(not velocita.isdigit()):
+#                         await update.message.reply_text("Errore: velocità non valida.")
+#                         logging.error("Errore: velocità non valida.")
+#                         raise
+#                 else:
+#                     velocita=""
+
+#                 # giorno e ora
+
+#                 # assumo che nessuno metta il giorno senza mettere l'ora
+#                 if(re.search("ora: ", user_message, re.IGNORECASE)):
+#                     value = re.split("ora: ", user_message, flags=re.IGNORECASE)[1]
+#                     ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
+#                     if(not ora):
+#                         await update.message.reply_text("Errore: ora non valida.")
+#                         logging.error("Errore: ora non valida.")
+#                         raise
+
+#                     if(re.search("giorno: ", user_message, re.IGNORECASE)):
+#                         value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
+#                         giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
+#                         print(giorno)
+#                         if(not giorno):
+#                             await update.message.reply_text("Errore: giorno non valido.")
+#                             logging.error("Errore: giorno non valido.")
+#                             raise
+#                     else:
+#                         # Per assicurarsi che il giorno sia localizzato.
+#                         data=update.message.date + timedelta(hours=fuso)
+#                         giorno = data.date().strftime('%d/%m/%y')
+#                 else:
+#                     # Fa lo shift in base al fuso orario
+#                     data=update.message.date + timedelta(hours=fuso)
+#                     giorno=data.date().strftime('%d/%m/%y')
+#                     ora=data.time().strftime('%H.%M')
+
+#                 if(re.search("città: ", user_message, re.IGNORECASE)):
+#                     value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
+#                     citta=re.split(r'[,;\n]+',value)[0]
+#                     # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
+#                     if(citta.startswith('=')):
+#                         await update.message.reply_text("Bel tentativo...")
+#                         logging.error("Errore: Città inizia con '='.")
+#                         raise
+#                     if(re.search("fuso: ", user_message, re.IGNORECASE)):
+#                         value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
+#                         fuso=re.split(r'[,;\n]+',value)[0]
+#                         if(not HelpersCazzi.is_integer(fuso)):
+#                             await update.message.reply_text("Errore: fuso non valido.")
+#                             logging.error(f"Errore: fuso non valido.")
+#                             raise
+#                     if(re.search("stato: ", user_message, re.IGNORECASE)):
+#                         value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
+#                         stato=re.split(r'[,;\n]+',value)[0]
+#                         # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
+#                         if(stato.startswith('=')):
+#                             await update.message.reply_text("Bel tentativo...")
+#                             logging.error("Errore: Stato inizia con '='.")
+#                             raise
+#                     try:
+#                         cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
+#                         flag = bool(True)
+#                     except sqlite3.Error as e:
+#                         await update.message.reply_text("Errore: dati non validi.")
+#                         logging.error(f"Dati inseriti non validi: {e}")
+#                         raise
+
+#                 # Inserimento dati in google spreadsheets
+
+#                 roba=[chi, giorno, ora, citta, stato, altitudine, velocita]
+
+#                 logging.info(f"Roba da inserire: {roba}")
+
+#                 success = sheets_handler.append_data(roba)
+
+#                 # Se tutto va bene, reagire con "👍"
+
+#                 if success:
+#                     await context.bot.set_message_reaction(
+#                         chat_id=update.message.chat_id,
+#                         message_id=update.message.message_id,
+#                         reaction=[ReactionTypeEmoji("👍")]
+#                     )
+
+#                     conn.commit()
+#                     logging.info("Dati cacca salvati.")
+#                     if (flag):
+#                         logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Stato: {stato}, Fuso: {fuso}")
+#                 else:
+#                     await update.message.reply_text("Qualcosa è andato storto, e l'input è stato ignorato. Riprova.")
+#                     conn.rollback()
+#                     logging.error(f"Dati cacca non salvati, e dati non salvati nel database.")
+#         logging.info("-"*50)
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gestione dei messaggi"""
     if(update.message):
-        LoggingCazzi.log_user_activity(update, "TEXT_MESSAGE", f"Message: {update.message.text[:50]}...")
+        LoggingCazzi.log_user_activity(update, "CACCA", f"Messaggio: {update.message.text[:50]}...")
         if (HelpersCazzi.check_gruppo_o_admin(update, cursor)):
             user_message = update.message.text
             user_id = update.message.from_user.id
 
-            if user_message.startswith("💩"):
-                logging.info("Messaggio inizia con 💩.")
+            # Preparare dati da mettere nella tabella
 
-                # Preparare dati da mettere nella tabella
-
-                # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
-                cursor.execute("select nome, fuso, citta, stato from cagatori where user_id=?", (user_id,))
-                dati=cursor.fetchone()
-                if(not dati):
-                    logging.warning("Utente non nel database: input ignorato.")
-                else:
-
-                    [chi, fuso, citta, stato]=dati
-
-                    # Per controllare se i dati sono stati aggiornati nel database.
-                    flag = bool(False)
-
-                    # Le keywords sono ora case insensitive
-                    # if f"altitudine: " in user_message:
-                    if(re.search("altitudine: ", user_message, re.IGNORECASE)):
-                        value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
-                        altitudine=re.split(r'[,;\n]+',value)[0]
-                        if(not altitudine.isdigit()):
-                            await update.message.reply_text("Errore: altitudine non valida.")
-                            logging.error("Errore: altitudine non valida.")
-                            return
-                    else:
-                        altitudine=""
-                    if(re.search("velocità: ", user_message, re.IGNORECASE)):
-                        value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
-                        velocita=re.split(r'[,;\n]+',value)[0]
-                        if(not velocita.isdigit()):
-                            await update.message.reply_text("Errore: velocità non valida.")
-                            logging.error("Errore: velocità non valida.")
-                            return
-                    else:
-                        velocita=""
-
-                    # giorno e ora
-
-                    # assumo che nessuno metta il giorno senza mettere l'ora
-                    if(re.search("ora: ", user_message, re.IGNORECASE)):
-                        value = re.split("ora: ", user_message, flags=re.IGNORECASE)[1]
-                        ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
-                        if(not ora):
-                            await update.message.reply_text("Errore: ora non valida.")
-                            logging.error("Errore: ora non valida.")
-                            return
-
-                        if(re.search("giorno: ", user_message, re.IGNORECASE)):
-                            value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
-                            giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
-                            print(giorno)
-                            if(not giorno):
-                                await update.message.reply_text("Errore: giorno non valido.")
-                                logging.error("Errore: giorno non valido.")
-                                return
-                        else:
-                            # Per assicurarsi che il giorno sia localizzato.
-                            data=update.message.date + timedelta(hours=fuso)
-                            giorno = data.date().strftime('%d/%m/%y')
-                    else:
-                        # Fa lo shift in base al fuso orario
-                        data=update.message.date + timedelta(hours=fuso)
-                        giorno=data.date().strftime('%d/%m/%y')
-                        ora=data.time().strftime('%H.%M')
-
-                    if(re.search("città: ", user_message, re.IGNORECASE)):
-                        value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
-                        citta=re.split(r'[,;\n]+',value)[0]
-                        # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-                        if(citta.startswith('=')):
-                            await update.message.reply_text("Bel tentativo...")
-                            logging.error("Errore: Città inizia con '='.")
-                            return
-                        if(re.search("fuso: ", user_message, re.IGNORECASE)):
-                            value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
-                            fuso=re.split(r'[,;\n]+',value)[0]
-                            if(not HelpersCazzi.is_integer(fuso)):
-                                await update.message.reply_text("Errore: fuso non valido.")
-                                logging.error(f"Errore: fuso non valido.")
-                                return
-                        if(re.search("stato: ", user_message, re.IGNORECASE)):
-                            value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
-                            stato=re.split(r'[,;\n]+',value)[0]
-                            # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-                            if(stato.startswith('=')):
-                                await update.message.reply_text("Bel tentativo...")
-                                logging.error("Errore: Stato inizia con '='.")
-                                return
-                        try:
-                            cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
-                            flag = bool(True)
-                        except sqlite3.Error as e:
-                            await update.message.reply_text("Errore: dati non validi.")
-                            logging.error(f"Dati inseriti non validi: {e}")
-                            return
-
-                    # Inserimento dati in google spreadsheets
-
-                    roba=[chi, giorno, ora, citta, stato, altitudine, velocita]
-
-                    logging.info(f"Roba da inserire: {roba}")
-
-                    success = sheets_handler.append_data(roba)
-
-                    # Se tutto va bene, reagire con "👍"
-
-                    if success:
-                        await context.bot.set_message_reaction(
-                            chat_id=update.message.chat_id,
-                            message_id=update.message.message_id,
-                            reaction=[ReactionTypeEmoji("👍")]
-                        )
-
-                        conn.commit()
-                        logging.info("Dati cacca salvati.")
-                        if (flag):
-                            logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Stato: {stato}, Fuso: {fuso}")
-                    else:
-                        await update.message.reply_text("Qualcosa è andato storto, e l'input è stato ignorato. Riprova.")
-                        logging.error(f"Dati cacca non salvati, e dati non salvati nel database.")
+            # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
+            cursor.execute("select nome, fuso, citta, stato from cagatori where user_id=?", (user_id,))
+            dati=cursor.fetchone()
+            if(not dati):
+                logging.warning("Utente non nel database: input ignorato.")
             else:
-                logging.info(f"Messaggio ricevuto, ma ignorato perché non inizia con 💩.")
+
+                [chi, fuso, citta, stato]=dati
+
+                # Per controllare se i dati sono stati aggiornati nel database.
+                flag = bool(False)
+
+                # Le keywords sono ora case insensitive
+                # if f"altitudine: " in user_message:
+                if(re.search("altitudine: ", user_message, re.IGNORECASE)):
+                    value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
+                    altitudine=re.split(r'[,;\n]+',value)[0]
+                    if(not altitudine.isdigit()):
+                        await update.message.reply_text("Errore: altitudine non valida.")
+                        logging.error("Errore: altitudine non valida.")
+                        raise
+                else:
+                    altitudine=""
+                if(re.search("velocità: ", user_message, re.IGNORECASE)):
+                    value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
+                    velocita=re.split(r'[,;\n]+',value)[0]
+                    if(not velocita.isdigit()):
+                        await update.message.reply_text("Errore: velocità non valida.")
+                        logging.error("Errore: velocità non valida.")
+                        raise
+                else:
+                    velocita=""
+
+                # giorno e ora
+
+                # assumo che nessuno metta il giorno senza mettere l'ora
+                if(re.search("ora: ", user_message, re.IGNORECASE)):
+                    value = re.split("ora: ", user_message, flags=re.IGNORECASE)[1]
+                    ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
+                    if(not ora):
+                        await update.message.reply_text("Errore: ora non valida.")
+                        logging.error("Errore: ora non valida.")
+                        raise
+
+                    if(re.search("giorno: ", user_message, re.IGNORECASE)):
+                        value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
+                        giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
+                        print(giorno)
+                        if(not giorno):
+                            await update.message.reply_text("Errore: giorno non valido.")
+                            logging.error("Errore: giorno non valido.")
+                            raise
+                    else:
+                        # Per assicurarsi che il giorno sia localizzato.
+                        data=update.message.date + timedelta(hours=fuso)
+                        giorno = data.date().strftime('%d/%m/%y')
+                else:
+                    # Fa lo shift in base al fuso orario
+                    data=update.message.date + timedelta(hours=fuso)
+                    giorno=data.date().strftime('%d/%m/%y')
+                    ora=data.time().strftime('%H.%M')
+
+                if(re.search("città: ", user_message, re.IGNORECASE)):
+                    flag = bool(True)
+                    value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
+                    citta=re.split(r'[,;\n]+',value)[0]
+                    # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
+                    if(citta.startswith('=')):
+                        await update.message.reply_text("Bel tentativo...")
+                        logging.error("Errore: Città inizia con '='.")
+                        raise
+                    if(re.search("fuso: ", user_message, re.IGNORECASE)):
+                        value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
+                        fuso=re.split(r'[,;\n]+',value)[0]
+                        if(not HelpersCazzi.is_integer(fuso)):
+                            await update.message.reply_text("Errore: fuso non valido.")
+                            logging.error(f"Errore: fuso non valido.")
+                            raise
+                    if(re.search("stato: ", user_message, re.IGNORECASE)):
+                        value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
+                        stato=re.split(r'[,;\n]+',value)[0]
+                        # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
+                        if(stato.startswith('=')):
+                            await update.message.reply_text("Bel tentativo...")
+                            logging.error("Errore: Stato inizia con '='.")
+                            raise
+                    try:
+                        cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
+                    except sqlite3.Error as e:
+                        await update.message.reply_text("Errore: dati non validi.")
+                        logging.error(f"Dati inseriti non validi: {e}")
+                        raise
+
+                # Tastiera con le opzioni
+                keyboard=[["Sì", "No"]]
+
+                # Chiede conferma
+                ans = await update.message.reply_text(
+                    f"Verranno inseriti i seguenti dati:\n\nGiorno: {giorno}\nOra: {ora}\nCittà: {citta}\nStato: {stato}\nAltitudine: {altitudine}\nVelocità: {velocita}\n\nSono corretti?",
+                    reply_markup=ReplyKeyboardMarkup(
+                        keyboard, one_time_keyboard=True, resize_keyboard=True
+                    ),
+                )
+                context.user_data["roba"]=[chi, giorno, ora, citta, stato, altitudine, velocita]
+                context.user_data["aggiornare"]=flag
+                context.user_data["fuso"]=fuso
+                context.user_data["messaggio"]=update.message.message_id
+                context.user_data["eliminare"]=ans.message_id
+                return 1
         logging.info("-"*50)
+    return ConversationHandler.END
+    
+async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "CACCA_SI")
+        ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Insrisco la cacca...", reply_markup=ReplyKeyboardRemove())
+        roba=context.user_data["roba"]
+        logging.info(f"Roba da inserire: {roba}")
+
+        success = sheets_handler.append_data(roba)
+
+        # Cancella i messaggi precedenti
+
+        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=context.user_data["eliminare"])
+        await update.message.delete()
+        sleep(1)
+        await ans.delete()
+        
+        # Se tutto va bene, reagire con "👍"
+
+        if success:
+            await context.bot.set_message_reaction(
+                chat_id=update.message.chat_id,
+                message_id=context.user_data["messaggio"],
+                reaction=[ReactionTypeEmoji("👍")]
+            )
+            logging.info("Dati cacca salvati.")
+            if(context.user_data["aggiornare"]):
+                conn.commit()
+                logging.info(f"Aggiornati i dati di {roba[0]}: Città: {roba[3]}, Stato: {roba[4]}, Fuso: {context.user_data["fuso"]}")
+        else:
+            await context.bot.send_message(chat_id=update.message.chat_id, text="Qualcosa è andato storto, e l'input è stato ignorato. Riprova.")
+            conn.rollback()
+            logging.error(f"Dati cacca non salvati, e dati non salvati nel database.")
+        context.user_data.clear()
+        logging.info("-"*50)
+        return ConversationHandler.END
+
+async def cacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "CACCA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
+        ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Cacca annullata.", reply_markup=ReplyKeyboardRemove())
+        # Cancella i messaggi precedenti
+        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=context.user_data["eliminare"])
+        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=context.user_data["messaggio"])
+        await update.message.delete()
+        context.user_data.clear()
+        conn.rollback()
+        logging.info(f"Dati cacca non salvati, e dati non salvati nel database.")
+        logging.info("-"*50)
+        sleep(1)
+        await ans.delete()
+        return ConversationHandler.END
 
 
 # /comandi
@@ -699,7 +871,6 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     """Fai partire il bot."""
     try:
-        # Create the Application
         application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
         # Add handlers
@@ -718,6 +889,15 @@ def main():
 # rmadmin - Rimuovi admin (admin only)
 # mieidati - Visualizza i propri dati
 
+
+        # application.add_handler(MessageHandler(filters.Regex("^💩"), handle_message))
+        application.add_handler(ConversationHandler(
+            entry_points=[MessageHandler(filters.Regex("^💩"), handle_message)],
+            states={
+                1: [MessageHandler(filters.Regex("^Sì$"), cacca_conferma)],
+            },
+            fallbacks=[MessageHandler(filters.TEXT, cacca_annulla)]
+        ))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("comandi", comandi_command))
         application.add_handler(CommandHandler("sintassi", sintassi_command))
@@ -736,14 +916,14 @@ def main():
         application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("abbandona", abbandona_command)],
             states={
-                1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si), MessageHandler(filters.TEXT, abbandona_annulla)],
+                1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si)]
             },
-            fallbacks=[],
+            fallbacks=[MessageHandler(filters.TEXT, abbandona_annulla)],
         ))
         application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("setdato", setdato_command)],
             states={
-                1: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_annulla)],
+                1: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT, setdato_annulla)],
                 2: [MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_cambia)]
             },
             fallbacks=[CommandHandler("annulla", setdato_annulla)]
@@ -753,7 +933,6 @@ def main():
         application.add_handler(CommandHandler("rmadmin", rmadmin_command))
         application.add_handler(CommandHandler("mieidati", mieidati_command))
         # application.add_handler(CommandHandler("rmcacca", rmcacca_command))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
         # Start the Bot
         logging.info("Bot partito...")
