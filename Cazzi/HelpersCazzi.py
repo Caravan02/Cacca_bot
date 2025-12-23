@@ -75,7 +75,10 @@ def valid_day(date_string: str) -> str:
 # Restituituisce l'ora nel formato standard se è stata inserita in modo sensato, None altrimenti. Formato standard: hh.mm
 def valid_hour(date_string: str) -> str:
     if(re.compile(r"^([01]\d|2[0-3])[.:][0-5]\d( )*$").match(date_string)):
-        date=date_string[0:5]
-        return date.replace(':', '.')
+        time=date_string[0:5]
+        return time.replace(':', '.')
+    elif(re.compile(r"^\d[.:][0-5]\d( )*$").match(date_string)):
+        time='0'+date_string[0:4]
+        return time.replace(':', '.')
     else:
         return
