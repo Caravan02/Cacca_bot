@@ -4,7 +4,6 @@ from telegram.ext import Application, CommandHandler, ConversationHandler, Messa
 import re
 from datetime import timedelta
 import sqlite3
-from time import sleep
 
 from Cazzi import LoggingCazzi, GoogleSheetsCazzi, HelpersCazzi
 from Cazzi.CostantiCazzi import GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL, TELEGRAM_BOT_TOKEN
@@ -304,7 +303,6 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await context.bot.delete_message(chat_id=update.message.chat_id, message_id=context.user_data["eliminare"])
         await update.message.delete()
-        sleep(1)
         await ans.delete()
         
         # Se tutto va bene, reagire con "👍"
@@ -339,7 +337,6 @@ async def cacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.rollback()
         logging.info(f"Dati cacca non salvati, e dati non salvati nel database.")
         logging.info("-"*50)
-        sleep(1)
         await ans.delete()
         return ConversationHandler.END
 
