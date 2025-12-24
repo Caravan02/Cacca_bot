@@ -8,7 +8,7 @@ import sqlite3
 from Cazzi import LoggingCazzi, GoogleSheetsCazzi, HelpersCazzi
 from Cazzi.CostantiCazzi import GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL, TELEGRAM_BOT_TOKEN
 
-# Initialize logging
+# Inizializza logging
 LoggingCazzi.setup_logging()
 
 # Connessione al database
@@ -31,144 +31,14 @@ except sqlite3.Error as e:
     logging.error(f"Errore nella connessione al database: {e}")
     raise
 
-# Initialize Google Sheets handler
+# Inizializza Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
 
 
 # Comandi Bot
 
-# Handler dei messaggi - viene eseguito ogni volta che qualcuno scrive un messaggio
-# async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     """Gestione dei messaggi"""
-#     if(update.message):
-#         LoggingCazzi.log_user_activity(update, "CACCA", f"Messaggio: {update.message.text[:50]}...")
-#         if (HelpersCazzi.check_gruppo_o_admin(update, cursor)):
-#             user_message = update.message.text
-#             user_id = update.message.from_user.id
-
-#             # Preparare dati da mettere nella tabella
-
-#             # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
-#             cursor.execute("select nome, fuso, citta, stato from cagatori where user_id=?", (user_id,))
-#             dati=cursor.fetchone()
-#             if(not dati):
-#                 logging.warning("Utente non nel database: input ignorato.")
-#             else:
-
-#                 [chi, fuso, citta, stato]=dati
-
-#                 # Per controllare se i dati sono stati aggiornati nel database.
-#                 flag = bool(False)
-
-#                 # Le keywords sono ora case insensitive
-#                 # if f"altitudine: " in user_message:
-#                 if(re.search("altitudine: ", user_message, re.IGNORECASE)):
-#                     value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
-#                     altitudine=re.split(r'[,;\n]+',value)[0]
-#                     if(not altitudine.isdigit()):
-#                         await update.message.reply_text("Errore: altitudine non valida.")
-#                         logging.error("Errore: altitudine non valida.")
-#                         raise
-#                 else:
-#                     altitudine=""
-#                 if(re.search("velocità: ", user_message, re.IGNORECASE)):
-#                     value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
-#                     velocita=re.split(r'[,;\n]+',value)[0]
-#                     if(not velocita.isdigit()):
-#                         await update.message.reply_text("Errore: velocità non valida.")
-#                         logging.error("Errore: velocità non valida.")
-#                         raise
-#                 else:
-#                     velocita=""
-
-#                 # giorno e ora
-
-#                 # assumo che nessuno metta il giorno senza mettere l'ora
-#                 if(re.search("ora: ", user_message, re.IGNORECASE)):
-#                     value = re.split("ora: ", user_message, flags=re.IGNORECASE)[1]
-#                     ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
-#                     if(not ora):
-#                         await update.message.reply_text("Errore: ora non valida.")
-#                         logging.error("Errore: ora non valida.")
-#                         raise
-
-#                     if(re.search("giorno: ", user_message, re.IGNORECASE)):
-#                         value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
-#                         giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
-#                         print(giorno)
-#                         if(not giorno):
-#                             await update.message.reply_text("Errore: giorno non valido.")
-#                             logging.error("Errore: giorno non valido.")
-#                             raise
-#                     else:
-#                         # Per assicurarsi che il giorno sia localizzato.
-#                         data=update.message.date + timedelta(hours=fuso)
-#                         giorno = data.date().strftime('%d/%m/%y')
-#                 else:
-#                     # Fa lo shift in base al fuso orario
-#                     data=update.message.date + timedelta(hours=fuso)
-#                     giorno=data.date().strftime('%d/%m/%y')
-#                     ora=data.time().strftime('%H.%M')
-
-#                 if(re.search("città: ", user_message, re.IGNORECASE)):
-#                     value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
-#                     citta=re.split(r'[,;\n]+',value)[0]
-#                     # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-#                     if(citta.startswith('=')):
-#                         await update.message.reply_text("Bel tentativo...")
-#                         logging.error("Errore: Città inizia con '='.")
-#                         raise
-#                     if(re.search("fuso: ", user_message, re.IGNORECASE)):
-#                         value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
-#                         fuso=re.split(r'[,;\n]+',value)[0]
-#                         if(not HelpersCazzi.is_integer(fuso)):
-#                             await update.message.reply_text("Errore: fuso non valido.")
-#                             logging.error(f"Errore: fuso non valido.")
-#                             raise
-#                     if(re.search("stato: ", user_message, re.IGNORECASE)):
-#                         value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
-#                         stato=re.split(r'[,;\n]+',value)[0]
-#                         # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-#                         if(stato.startswith('=')):
-#                             await update.message.reply_text("Bel tentativo...")
-#                             logging.error("Errore: Stato inizia con '='.")
-#                             raise
-#                     try:
-#                         cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
-#                         flag = bool(True)
-#                     except sqlite3.Error as e:
-#                         await update.message.reply_text("Errore: dati non validi.")
-#                         logging.error(f"Dati inseriti non validi: {e}")
-#                         raise
-
-#                 # Inserimento dati in google spreadsheets
-
-#                 roba=[chi, giorno, ora, citta, stato, altitudine, velocita]
-
-#                 logging.info(f"Roba da inserire: {roba}")
-
-#                 success = sheets_handler.append_data(roba)
-
-#                 # Se tutto va bene, reagire con "👍"
-
-#                 if success:
-#                     await context.bot.set_message_reaction(
-#                         chat_id=update.message.chat_id,
-#                         message_id=update.message.message_id,
-#                         reaction=[ReactionTypeEmoji("👍")]
-#                     )
-
-#                     conn.commit()
-#                     logging.info("Dati cacca salvati.")
-#                     if (flag):
-#                         logging.info(f"Aggiornati i dati di {chi}: Città: {citta}, Stato: {stato}, Fuso: {fuso}")
-#                 else:
-#                     await update.message.reply_text("Qualcosa è andato storto, e l'input è stato ignorato. Riprova.")
-#                     conn.rollback()
-#                     logging.error(f"Dati cacca non salvati, e dati non salvati nel database.")
-#         logging.info("-"*50)
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Gestisce le cacche
+async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gestione dei messaggi"""
     if(update.message):
         LoggingCazzi.log_user_activity(update, "CACCA", f"Messaggio: {update.message.text[:50]}...")
@@ -289,7 +159,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return 1
         logging.info("-"*50)
     return ConversationHandler.END
-    
+
+# Inserisce la cacca se l'utente conferma
 async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "CACCA_SI")
@@ -323,6 +194,7 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info("-"*50)
         return ConversationHandler.END
 
+# Rimuove la cacca se l'utente annulla
 async def cacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "CACCA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
@@ -611,6 +483,7 @@ async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.info("Spiegata la sintassi di /rimuovi")
         logging.info("-"*50)
 
+
 # /abbandona
 async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Abbandona la cacca"""
@@ -776,6 +649,7 @@ async def setdato_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("-"*50)
     return ConversationHandler.END
 
+
 # /cagatori
 async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Visualizza tutti i cagatori"""
@@ -800,6 +674,7 @@ async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"Errore nel recuperare la lista dei cagatori.")
                 logging.error(f"Errore: {e}")
         logging.info("-"*50)
+
 
 # /addadmin - Sintassi: /addadmin <nome>
 async def addadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -829,6 +704,7 @@ async def addadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("Sintassi: /addadmin <nome>")
                 logging.info("Spiegata la sintassi di /addadmin")
         logging.info("-"*50)
+
 
 # /rmadmin - Sintassi: /rmadmin <nome>
 async def rmadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -884,34 +760,12 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.error(f"Errore. {e}")
         logging.info("-"*50)
 
-# async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     """Rimuovi ultima propria cacca, se è tra le ultime 10"""
-#     chat_id = update.effective_chat.id
-#     user_id = update.effective_user.id
-#     if (chat_id == GRUPPO_CACCA) or HelpersCazzi.is_admin(user_id, cursor):
-#         LoggingCazzi.log_user_activity(update, "RMCACCA_COMMAND")
-#         cursor.execute("select nome from cagatori where user_id=?", (user_id,))
-#         x=cursor.fetchone()
-#         if(x):
-#             nome=x[0]
-#             success = sheets_handler.remove_last_cacca(nome)
-
-#             if success:
-#                 await update.message.reply_text(f"Ultima cacca di {nome} rimossa: {success}")
-#                 logging.info(f"Dati cacca rimossi")
-#             else:
-#                 await update.message.reply_text("Qualcosa è andato storto. Riprova.")
-#                 logging.error(f"Qualcosa è andato storto.")
-#         else:
-#             await update.message.reply_text("Errore. Probabimente non sei un cagatore.")
-#             logging.error(f"Probabilmente {nome} non è un cagatore.")
 
 def main():
     """Fai partire il bot."""
     try:
         application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-        # Add handlers
 
 
 # help - Visualizza un messaggio di aiuto
@@ -927,12 +781,12 @@ def main():
 # rmadmin - Rimuovi admin (admin only)
 # mieidati - Visualizza i propri dati
 
+        # Add handlers
 
-        # application.add_handler(MessageHandler(filters.Regex("^💩"), handle_message))
         application.add_handler(ConversationHandler(
-            entry_points=[MessageHandler(filters.Regex("^💩"), handle_message)],
+            entry_points=[MessageHandler(filters.Regex("^💩"), cacca_handle)],
             states={
-                1: [MessageHandler(filters.Regex("^Sì$"), cacca_conferma)],
+                1: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), cacca_conferma)],
             },
             fallbacks=[MessageHandler(filters.TEXT, cacca_annulla)]
         ))
@@ -970,7 +824,6 @@ def main():
         application.add_handler(CommandHandler("addadmin", addadmin_command))
         application.add_handler(CommandHandler("rmadmin", rmadmin_command))
         application.add_handler(CommandHandler("mieidati", mieidati_command))
-        # application.add_handler(CommandHandler("rmcacca", rmcacca_command))
 
         # Start the Bot
         logging.info("Bot partito...")
