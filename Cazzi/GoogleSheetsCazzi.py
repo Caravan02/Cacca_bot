@@ -15,11 +15,11 @@ class GoogleSheetsHandler:
         self._setup_client()
     
     def _setup_client(self):
-        """Initialize Google Sheets client"""
+        """Initializza il client di Google Sheets"""
         try:
-            # Check if credentials file exists
+            # Controlla che il file con le credenziali esista
             if not os.path.exists(self.creds_file):
-                error_msg = f"Google Sheets credentials file not found: {self.creds_file}"
+                error_msg = f"File con le credenziali di Google Sheets non trovato: {self.creds_file}"
                 self.logger.error(error_msg)
                 raise FileNotFoundError(error_msg)
             
@@ -30,45 +30,17 @@ class GoogleSheetsHandler:
             creds = Credentials.from_service_account_file(self.creds_file, scopes=scopes)
             self.client = gspread.authorize(creds)
             self.sheet = self.client.open_by_url(self.spreadsheet_url).worksheet(WORKSHEET_NAME)
-            self.logger.info("Google Sheets client initialized successfully")
+            self.logger.info("Client di Google sheets inizializzato")
         except Exception as e:
-            self.logger.error(f"Error setting up Google Sheets client: {e}", exc_info=True)
+            self.logger.error(f"Errore nell'inizializzazione del client di Google Sheets: {e}", exc_info=True)
             raise
     
     def append_data(self, data):
-        """Append data to the spreadsheet"""
+        """Aggiungi dati al Google Sheets"""
         try:
             self.sheet.append_row(data, table_range='A1', value_input_option="USER_ENTERED")
-            self.logger.info(f"Data appended to sheet: {data}")
+            self.logger.info(f"Dati aggiunti: {data}")
             return True
         except Exception as e:
-            self.logger.error(f"Error appending data: {e}", exc_info=True)
+            self.logger.error(f"Errore nell'aggiungere dati: {e}", exc_info=True)
             return False
-        
-    # def remove_last_cacca(self, nome):
-    #     """Rimuove l'ultima cacca"""
-    #     try:
-    #         row_count = get_populated_row_count(self.sheet)
-    #         span = min(row_count, 10)
-    #         first_row=row_count+1-span
-    #         range_str = f"A{first_row}:A{row_count}"
-    #         last_rows = self.sheet.get(range_str)
-    #         print(row_count, range_str, last_rows)
-    #         for i in range(span - 1, -1, -1):
-    #             if (last_rows[i][0] == nome):
-    #                 self.sheet.delete_rows(first_row + i)
-    #                 return last_rows[i]
-    #         self.logger.error(f"Errore. {last_rows}")
-    #     except Exception as e:
-    #         self.logger.error(f"Error removing data: {e}", exc_info=True)
-    #         return False
-    
-    # def get_all_data(self):
-    #     """Get all data from the spreadsheet"""
-    #     try:
-    #         data = self.sheet.get_all_records()
-    #         self.logger.info(f"Retrieved {len(data)} records from spreadsheet")
-    #         return data
-    #     except Exception as e:
-    #         self.logger.error(f"Error getting data: {e}", exc_info=True)
-    #         return []

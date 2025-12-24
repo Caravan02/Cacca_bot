@@ -48,7 +48,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # Preparare dati da mettere nella tabella
 
-            # tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
+            # Tabella per converire i nomi di telegram nei nomi sul google sheets. Uso lo user_id per determinarlo.
             cursor.execute("select nome, fuso, citta, stato from cagatori where user_id=?", (user_id,))
             dati=cursor.fetchone()
             if(not dati):
