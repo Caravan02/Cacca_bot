@@ -278,7 +278,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ans = await update.message.reply_text(
                     f"Verranno inseriti i seguenti dati:\n\nGiorno: {giorno}\nOra: {ora}\nCittà: {citta}\nStato: {stato}\nAltitudine: {altitudine}\nVelocità: {velocita}\n\nSono corretti?",
                     reply_markup=ReplyKeyboardMarkup(
-                        keyboard, one_time_keyboard=True, resize_keyboard=True
+                        keyboard, one_time_keyboard=True, resize_keyboard=True, selective=True
                     ),
                 )
                 context.user_data["roba"]=[chi, giorno, ora, citta, stato, altitudine, velocita]
@@ -301,9 +301,7 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Cancella i messaggi precedenti
 
-        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=context.user_data["eliminare"])
-        await update.message.delete()
-        await ans.delete()
+        await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=[context.user_data["eliminare"],update.message.message_id, ans.message_id])
         
         # Se tutto va bene, reagire con "👍"
 
@@ -329,15 +327,12 @@ async def cacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "CACCA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
         ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Cacca annullata.", reply_markup=ReplyKeyboardRemove())
+        conn.rollback() # Annulla update al database
         # Cancella i messaggi precedenti
-        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=context.user_data["eliminare"])
-        await context.bot.delete_message(chat_id=update.message.chat_id, message_id=context.user_data["messaggio"])
-        await update.message.delete()
+        await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=[context.user_data["eliminare"], context.user_data["messaggio"], update.message.message_id, ans.message_id])
         context.user_data.clear()
-        conn.rollback()
         logging.info(f"Dati cacca non salvati, e dati non salvati nel database.")
         logging.info("-"*50)
-        await ans.delete()
         return ConversationHandler.END
 
 
@@ -467,9 +462,12 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "JOIN_COMMAND")
         if(HelpersCazzi.check_gruppo_o_admin(update, cursor)):
             # Chiede il nome
-            await update.message.reply_text(
+            mess=await update.message.reply_text(
                 "Inserisci il tuo nome. Questo è il nome che comaprirà sullo spreadsheet.\n\nFare /annulla in qualsiasi momento per annullare l'operazione."
             )
+            # Memorizza gli id dei messaggi per poterli cancellare poi
+            context.user_data["messaggio"]=update.message.message_id
+            context.user_data["eliminare"]=[mess.message_id,]
             return 1
         else:
             # Termina la conversazione se non è nel gruppo o non è admin
@@ -480,52 +478,62 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_NOME", f"Messaggio: {update.message.text[:50]}")
+        context.user_data["eliminare"].append(update.message.message_id)
         if(not update.message.text.startswith('=')): # Controlla il nome
             context.user_data["nome"]=update.message.text # Registra il nome
-            await update.message.reply_text( # Chiede il fuso
+            mess=await update.message.reply_text( # Chiede il fuso
                 "Inserisci il tuo fuso orario UTC (esempio: +1)."
             )
+            context.user_data["eliminare"].append(mess.message_id)
             return 2
         else:
             logging.warning("Valore inizia con =")
-            await update.message.reply_text("Bel tentativo... Riprova.")
+            mess=await update.message.reply_text("Bel tentativo... Riprova.")
+            context.user_data["eliminare"].append(mess.message_id)
             return 1 # Se non è valido, richiede il nome
 
 # Registra il fuso e chiede la città
 async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_FUSO", f"Messaggio: {update.message.text[:50]}")
+        context.user_data["eliminare"].append(update.message.message_id)
         fuso=update.message.text
         if(HelpersCazzi.is_integer(fuso)): # Controlla il fuso
             context.user_data["fuso"]=int(fuso) # Registra il fuso
-            await update.message.reply_text( # Chiede la città
+            mess=await update.message.reply_text( # Chiede la città
                 "Inserisci la tua città attuale."
             )
+            context.user_data["eliminare"].append(mess.message_id)
             return 3
         else:
-            await update.message.reply_text("Errore: fuso non valido. Reinserire il fuso.")
             logging.warning("Il fuso inserito non è valido.")
+            mess=await update.message.reply_text("Errore: fuso non valido. Reinserire il fuso.")
+            context.user_data["eliminare"].append(mess.message_id)
             return 2 # Se non è valido, richiede il fuso
 
 # Regista la città e chiede lo stato
 async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
+        context.user_data["eliminare"].append(update.message.message_id)
         LoggingCazzi.log_user_activity(update, "JOIN_CITTA", f"Messaggio: {update.message.text[:50]}")
         if(not update.message.text.startswith('=')): # Controlla la città
             context.user_data["citta"]=update.message.text # Registra la città
-            await update.message.reply_text( # Chiede lo stato
+            mess=await update.message.reply_text( # Chiede lo stato
                 "Inserisci il tuo stato."
             )
+            context.user_data["eliminare"].append(mess.message_id)
             return 4
         else:
             logging.warning("Valore inizia con =")
-            await update.message.reply_text("Bel tentativo... Riprova.")
+            mess=await update.message.reply_text("Bel tentativo... Riprova.")
+            context.user_data["eliminare"].append(mess.message_id)
             return 3 # Se non è valido, richiede la città
 
 # Chiede lo stato, dopodiché se è valido prende tutti i dati e crea il nuovo cagatore
 async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_STATO", f"Messaggio: {update.message.text[:50]}")
+        context.user_data["eliminare"].append(update.message.message_id)
         stato=update.message.text
         if(not stato.startswith('=')): # Controlla lo stato
             # Prende i dati
@@ -533,7 +541,6 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
             nome=context.user_data["nome"]
             fuso=context.user_data["fuso"]
             citta=context.user_data["citta"]
-            context.user_data.clear()
             try:
                 # Inserisce i dati nel database
                 cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato))
@@ -544,18 +551,28 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Errore
                 await update.message.reply_text("Errore nell'inserimento nel database. Forse sei già nel database o qualcuno ha il tuo stesso nome.")
                 logging.warning(f"Errore nell'inserimento nel database: {e}")
+
+            # Elimina messaggi
+            await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+            context.user_data.clear()
             logging.info("-"*50)
             return ConversationHandler.END
         else:
             # Se non è valido, richiede lo stato
             logging.warning("Bel tentativo...")
-            await update.message.reply_text("Bel tentativo... Riprova.")
+            mess=await update.message.reply_text("Bel tentativo... Riprova.")
+            context.user_data["eliminare"].append(mess.message_id)
             return 4
 
 # /annulla - annulla l'operazione di join
 async def join_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "JOIN_ANNULLA")
-    await update.message.reply_text("Operazione annullata.")
+    context.user_data["eliminare"].append(update.message.message_id)
+    mess=await update.message.reply_text("Operazione annullata.")
+    context.user_data["eliminare"].append(mess.message_id)
+    context.user_data["eliminare"].append(context.user_data["messaggio"])
+    # Elimina messaggi
+    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
     context.user_data.clear() # Pulisce i dati salvati precedentemente
     logging.info("Operazione annullata.")
     logging.info("-"*50)
@@ -600,17 +617,18 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "ABBANDONA_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
-
+            context.user_data["messaggio"]=update.message.message_id
             # Tastiera con le opzioni
             keyboard=[["Sì", "No"]]
 
             # Chiede conferma
-            await update.message.reply_text(
+            mess=await update.message.reply_text(
                 "Vuoi davvero uscire dal database? Le tue cacche non verranno più registrate.",
                 reply_markup=ReplyKeyboardMarkup(
-                    keyboard, one_time_keyboard=True, resize_keyboard=True
+                    keyboard, one_time_keyboard=True, resize_keyboard=True, selective=True
                 ),
             )
+            context.user_data["eliminare"]=[mess.message_id]
             return 1
         else:
             logging.info("-"*50)
@@ -620,6 +638,7 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Se dice sì, abbandona
 async def abbandona_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "ABBANDONA_SI")
+    context.user_data["eliminare"].append(update.message.message_id)
     try:
         # Rimuovi dal database
         user_id = update.message.from_user.id
@@ -631,13 +650,22 @@ async def abbandona_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Errore
         await update.message.reply_text(f"Errore nella rimozione.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
         logging.error(f"Errore nella rimozione: {e}")
+    # Elimina messaggi
+    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+    context.user_data.clear()
     logging.info("-"*50)
     return ConversationHandler.END
 
 # Annulla
 async def abbandona_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "ABBANDONA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
-    await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+    mess=await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+    context.user_data["eliminare"].append(update.message.message_id)
+    context.user_data["eliminare"].append(mess.message_id)
+    context.user_data["eliminare"].append(context.user_data["messaggio"])
+    # Elimina messaggi
+    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+    context.user_data.clear()
     logging.info("Operazione annullata.")
     logging.info("-"*50)
     return ConversationHandler.END
@@ -649,16 +677,18 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SETDATO_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
+            context.user_data["messaggio"]=update.message.message_id
             # Tastiera con le opzioni
             keyboard=[["Fuso", "Città"], ["Stato", "Annulla"]]
 
             # Chiede dato da cambiare
-            await update.message.reply_text(
+            mess=await update.message.reply_text(
                 "Quale dato vuoi cambiare?\n\nScrivi /annulla in qualsiasi momento per annullare.",
                 reply_markup=ReplyKeyboardMarkup(
-                    keyboard, one_time_keyboard=True, resize_keyboard=True
+                    keyboard, one_time_keyboard=True, resize_keyboard=True, selective=True
                 ),
             )
+            context.user_data["eliminare"]=[mess.message_id]
             return 1
         else:
             logging.info("-"*50)
@@ -668,16 +698,19 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def setdato_dato(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SETDATO_DATO", f"Messaggio: {update.message.text}")
+        context.user_data["eliminare"].append(update.message.message_id)
         context.user_data["dato"]=update.message.text # Salva l'opzione
-        await update.message.reply_text( # Chiede il nuovo valore
+        mess=await update.message.reply_text( # Chiede il nuovo valore
             "Scrivi il nuovo valore.", reply_markup=ReplyKeyboardRemove()
         )
+        context.user_data["eliminare"].append(mess.message_id)
         return 2
 
 # Salva il nuovo valore, e lo cambia se è valido
 async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SETDATO_CAMBIA", f"Messaggio: {update.message.text}")
+        context.user_data["eliminare"].append(update.message.message_id)
         # Prende le informazioni
         user_id=update.message.from_user.id
         dato=context.user_data["dato"]
@@ -693,8 +726,9 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 conn.commit()
             else:
                 # Errore
-                await update.message.reply_text("Errore: fuso non valido. Riprova")
                 logging.warning("Errore: fuso non valido. Riprova.")
+                mess=await update.message.reply_text("Errore: fuso non valido. Riprova")
+                context.user_data["eliminare"].append(mess.message_id)
                 return 2
 
         elif dato == 'Città':
@@ -707,7 +741,8 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 # Errore
                 logging.warning("Valore inizia con =")
-                await update.message.reply_text("Bel tentativo... Riprova.")
+                mess=await update.message.reply_text("Bel tentativo... Riprova.")
+                context.user_data["eliminare"].append(mess.message_id)
                 return 2
 
         else: # dato == 'Stato'
@@ -720,9 +755,10 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 # Errore
                 logging.warning("Valore inizia con =")
-                await update.message.reply_text("Bel tentativo... Riprova.")
+                mess=await update.message.reply_text("Bel tentativo... Riprova.")
+                context.user_data["eliminare"].append(mess.message_id)
                 return 2
-
+        await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
         context.user_data.clear() # Pulisce i dati raccolti
         logging.info("-"*50)
         return ConversationHandler.END
@@ -730,7 +766,12 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # /annulla
 async def setdato_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "SETDATO_ANNULLA", f"Messaggio: {update.message.text[:50]}")
-    await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fa sparire la tastiera
+    mess=await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fa sparire la tastiera
+    context.user_data["eliminare"].append(update.message.message_id)
+    context.user_data["eliminare"].append(mess.message_id)
+    context.user_data["eliminare"].append(context.user_data["messaggio"])
+    # Elimina messaggi
+    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
     logging.info("Operazione annullata.")
     logging.info("-"*50)
     return ConversationHandler.END
@@ -934,7 +975,6 @@ def main():
         # Start the Bot
         logging.info("Bot partito...")
         application.run_polling()
-
     except Exception as e:
         logging.critical(f"Errore: bot non partito: {e}", exc_info=True)
         raise
