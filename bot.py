@@ -4,6 +4,7 @@ from telegram.ext import Application, CommandHandler, ConversationHandler, Messa
 import re
 from datetime import timedelta
 import sqlite3
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from Cazzi import LoggingCazzi, GoogleSheetsCazzi, HelpersCazzi
 from Cazzi.CostantiCazzi import GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL, TELEGRAM_BOT_TOKEN
@@ -43,6 +44,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "CACCA", f"Messaggio: {update.message.text[:50]}...")
         if (HelpersCazzi.check_gruppo_o_admin(update, cursor)):
+
             user_message = update.message.text
             user_id = update.message.from_user.id
 
@@ -164,7 +166,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "CACCA_SI")
-        ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Insrisco la cacca...", reply_markup=ReplyKeyboardRemove())
+        ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Inserisco la cacca...", reply_markup=ReplyKeyboardRemove())
         roba=context.user_data["roba"]
         logging.info(f"Roba da inserire: {roba}")
 
@@ -760,7 +762,6 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.error(f"Errore. {e}")
         logging.info("-"*50)
 
-
 def main():
     """Fai partire il bot."""
     try:
@@ -833,4 +834,11 @@ def main():
         raise
 
 if __name__ == '__main__':
+
+    # Tiene viva la connessione facendo una richiesta al google sheets ogni tot.
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(sheets_handler.keep_alive, "interval", minutes=3)
+    scheduler.start()
+    
+    # Fa partire il loop
     main()

@@ -45,6 +45,9 @@ def setup_logging():
     # Toglie i logging pallosi
     httpx_logger = logging.getLogger('httpx')
     httpx_logger.setLevel(logging.WARNING)
+
+    scheduler_logger = logging.getLogger('apscheduler.executors.default')
+    scheduler_logger.setLevel(logging.WARNING)
     
     # Aggiunge handler al logger
     logger.addHandler(file_handler)

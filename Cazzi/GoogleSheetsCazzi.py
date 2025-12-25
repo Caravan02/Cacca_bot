@@ -35,9 +35,19 @@ class GoogleSheetsHandler:
             self.logger.error(f"Errore nell'inizializzazione del client di Google Sheets: {e}", exc_info=True)
             raise
     
+    # Un dirty trick clamoroso
+    def keep_alive(self):
+        """Fa una richiesta per tenere in vita la connessione"""
+        try:
+            _=self.sheet.acell("A1").value
+        except:
+            self.logger.warning("Connessione allo spreadsheet persa, probabilmente ora è ristabilita.")
+            pass
+
     def append_data(self, data):
         """Aggiungi dati al Google Sheets"""
         try:
+
             self.sheet.append_row(data, table_range='A1', value_input_option="USER_ENTERED")
             self.logger.info(f"Dati aggiunti: {data}")
             return True
