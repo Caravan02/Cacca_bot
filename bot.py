@@ -35,6 +35,8 @@ except sqlite3.Error as e:
 # Inizializza Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
 
+# Lista delle cacche da inserire
+cacche=[]
 
 # Comandi Bot
 
@@ -167,10 +169,15 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "CACCA_SI")
         ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Inserisco la cacca...", reply_markup=ReplyKeyboardRemove())
+
+        # Si connette al google sheets ogni volta che scrive
+        # sheets_handler.connect()
+
         roba=context.user_data["roba"]
+        cacche.append(roba)
         logging.info(f"Roba da inserire: {roba}")
 
-        success = sheets_handler.append_data(roba)
+        # success = sheets_handler.append_data(roba)
 
         # Cancella i messaggi precedenti
 
@@ -178,20 +185,31 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Se tutto va bene, reagire con "👍"
 
-        if success:
-            await context.bot.set_message_reaction(
-                chat_id=update.message.chat_id,
-                message_id=context.user_data["messaggio"],
-                reaction=[ReactionTypeEmoji("👍")]
-            )
-            logging.info("Dati cacca salvati.")
-            if(context.user_data["aggiornare"]):
-                conn.commit()
-                logging.info(f"Aggiornati i dati di {roba[0]}: Città: {roba[3]}, Stato: {roba[4]}, Fuso: {context.user_data["fuso"]}")
-        else:
-            await context.bot.send_message(chat_id=update.message.chat_id, text="Qualcosa è andato storto, e l'input è stato ignorato. Riprova.")
-            conn.rollback()
-            logging.error(f"Dati cacca non salvati, e dati non salvati nel database.")
+        # if success:
+        #     await context.bot.set_message_reaction(
+        #         chat_id=update.message.chat_id,
+        #         message_id=context.user_data["messaggio"],
+        #         reaction=[ReactionTypeEmoji("👍")]
+        #     )
+        #     logging.info("Dati cacca salvati.")
+        #     if(context.user_data["aggiornare"]):
+        #         conn.commit()
+        #         logging.info(f"Aggiornati i dati di {roba[0]}: Città: {roba[3]}, Stato: {roba[4]}, Fuso: {context.user_data["fuso"]}")
+        # else:
+        #     await context.bot.send_message(chat_id=update.message.chat_id, text="Qualcosa è andato storto, e l'input è stato ignorato. Riprova.")
+        #     conn.rollback()
+        #     logging.error(f"Dati cacca non salvati, e dati non salvati nel database.")
+
+        await context.bot.set_message_reaction(
+            chat_id=update.message.chat_id,
+            message_id=context.user_data["messaggio"],
+            reaction=[ReactionTypeEmoji("👍")]
+        )
+        logging.info("Dati cacca salvati.")
+        if(context.user_data["aggiornare"]):
+            conn.commit()
+            logging.info(f"Aggiornati i dati di {roba[0]}: Città: {roba[3]}, Stato: {roba[4]}, Fuso: {context.user_data["fuso"]}")
+
         context.user_data.clear()
         logging.info("-"*50)
         return ConversationHandler.END
@@ -762,12 +780,17 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.error(f"Errore. {e}")
         logging.info("-"*50)
 
+
+def inserisci_cacche():
+    """Inserisce le cacche nello spreadsheet"""
+    if sheets_handler.append_data(cacche):
+        cacche.clear()
+    
+
 def main():
     """Fai partire il bot."""
     try:
         application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-
-
 
 # help - Visualizza un messaggio di aiuto
 # comandi - Manda una lista dei comandi
@@ -835,9 +858,9 @@ def main():
 
 if __name__ == '__main__':
 
-    # Tiene viva la connessione facendo una richiesta al google sheets ogni tot.
+    # Memorizza le cacche e le invia ogni ora in blocco
     scheduler = BackgroundScheduler()
-    scheduler.add_job(sheets_handler.keep_alive, "interval", minutes=3)
+    scheduler.add_job(inserisci_cacche, "interval", minutes=60) # Ogni 60 minuti
     scheduler.start()
     
     # Fa partire il loop

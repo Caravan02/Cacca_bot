@@ -1,5 +1,4 @@
 apscheduler==3.11.2
 gspread==6.2.1
-protobuf==6.33.2
 python-dotenv==1.2.1
 python-telegram-bot==22.5
