@@ -783,6 +783,7 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def inserisci_cacche():
     """Inserisce le cacche nello spreadsheet"""
+    sheets_handler.connect()
     if sheets_handler.append_data(cacche):
         cacche.clear()
     

@@ -29,11 +29,16 @@ class GoogleSheetsHandler:
         except Exception as e:
             self.logger.error(f"Errore nell'inizializzazione del client di Google Sheets: {e}", exc_info=True)
             raise
-    
-    # def connect(self):
-    #     """Crea la connessione allo spreadsheet"""
-    #     self.client = gspread.service_account(filename=self.creds_file)
-    #     self.sheet = self.client.open_by_url(self.spreadsheet_url).worksheet(WORKSHEET_NAME)
+
+    def connect(self):
+        """Crea la connessione allo spreadsheet"""
+        try:
+            self.client = gspread.service_account(filename=self.creds_file)
+            self.sheet = self.client.open_by_url(self.spreadsheet_url).worksheet(WORKSHEET_NAME)
+            self.logger.info("Connessione allo spreadsheet riuscita.")
+        except Exception as e:
+            self.logger.error(f"Connessione allo spreadsheet non riuscita: {e}", exc_info=True)
+            raise
 
     # Un dirty trick clamoroso
     # def keep_alive(self):
