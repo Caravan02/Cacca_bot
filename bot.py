@@ -866,3 +866,8 @@ if __name__ == '__main__':
     
     # Fa partire il loop
     main()
+
+    # Inserisce le ultime cacche prima di terminare
+    logging.info("Inserisco le le ultime cacche prima di uscire...")
+    inserisci_cacche()
+    logging.info("Bot fermato.")
