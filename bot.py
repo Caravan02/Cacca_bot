@@ -437,7 +437,7 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Inserisce i dati nel database
                 cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato))
                 await update.message.reply_text(f"Complementi {nome}! Ora sei anche tu un* cagator*! Il tuo fuso orario UTC è {fuso}, la tua città è {citta} e il tuo stato è {stato}.")
-                logging.info(f"Aggiunto cagatore {nome} con user_id {nome}, fuso orario {fuso}, città {citta}, stato {stato}.")
+                logging.info(f"Aggiunto cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
                 conn.commit()
             except sqlite3.Error as e:
                 # Errore
