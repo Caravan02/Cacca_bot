@@ -61,7 +61,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 [chi, fuso, citta, stato]=dati
 
-                # Per controllare se i dati sono stati aggiornati nel database.
+                # Per controllare se i dati devono essere aggiornati nel database.
                 flag = bool(False)
 
                 # Le keywords sono ora case insensitive
@@ -85,6 +85,36 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 else:
                     velocita=""
 
+                # Dati potenzialmente da modificare nel database
+                if(re.search("città: ", user_message, re.IGNORECASE)):
+                    flag = bool(True)
+                    value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
+                    citta=re.split(r'[,;\n]+',value)[0]
+                    # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
+                    if(citta.startswith('=')):
+                        await update.message.reply_text("Bel tentativo...")
+                        logging.error("Errore: Città inizia con '='.")
+                        raise
+                if(re.search("fuso: ", user_message, re.IGNORECASE)):
+                    flag = bool(True)
+                    value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
+                    fuso=re.split(r'[,;\n]+',value)[0]
+                    if(not HelpersCazzi.is_integer(fuso)):
+                        await update.message.reply_text("Errore: fuso non valido.")
+                        logging.error(f"Errore: fuso non valido.")
+                        raise
+                    else:
+                        fuso=int(fuso)
+                if(re.search("stato: ", user_message, re.IGNORECASE)):
+                    flag = bool(True)
+                    value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
+                    stato=re.split(r'[,;\n]+',value)[0]
+                    # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
+                    if(stato.startswith('=')):
+                        await update.message.reply_text("Bel tentativo...")
+                        logging.error("Errore: Stato inizia con '='.")
+                        raise
+
                 # giorno e ora
 
                 # assumo che nessuno metta il giorno senza mettere l'ora
@@ -99,7 +129,6 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if(re.search("giorno: ", user_message, re.IGNORECASE)):
                         value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
                         giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
-                        print(giorno)
                         if(not giorno):
                             await update.message.reply_text("Errore: giorno non valido.")
                             logging.error("Errore: giorno non valido.")
@@ -114,30 +143,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     giorno=data.date().strftime('%d/%m/%y')
                     ora=data.time().strftime('%H.%M')
 
-                if(re.search("città: ", user_message, re.IGNORECASE)):
-                    flag = bool(True)
-                    value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
-                    citta=re.split(r'[,;\n]+',value)[0]
-                    # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-                    if(citta.startswith('=')):
-                        await update.message.reply_text("Bel tentativo...")
-                        logging.error("Errore: Città inizia con '='.")
-                        raise
-                    if(re.search("fuso: ", user_message, re.IGNORECASE)):
-                        value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
-                        fuso=re.split(r'[,;\n]+',value)[0]
-                        if(not HelpersCazzi.is_integer(fuso)):
-                            await update.message.reply_text("Errore: fuso non valido.")
-                            logging.error(f"Errore: fuso non valido.")
-                            raise
-                    if(re.search("stato: ", user_message, re.IGNORECASE)):
-                        value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
-                        stato=re.split(r'[,;\n]+',value)[0]
-                        # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-                        if(stato.startswith('=')):
-                            await update.message.reply_text("Bel tentativo...")
-                            logging.error("Errore: Stato inizia con '='.")
-                            raise
+                if(flag):
                     try:
                         cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
                     except sqlite3.Error as e:
