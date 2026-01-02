@@ -23,5 +23,8 @@ logs/
 # Databases
 *.db
 
+# Scripts
+Scripts/
+
 # TODO
 TODO

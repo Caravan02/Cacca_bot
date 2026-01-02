@@ -1,3 +1,5 @@
+import signal
+import sys
 import logging
 from telegram import Update, ReactionTypeEmoji, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters, ContextTypes
@@ -798,6 +800,12 @@ def inserisci_cacche():
     else:
         logging.info("Non ci sono nuove cacche da aggiungere allo spreadsheet.")
     
+def shutdown(signum, frame):
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, shutdown)
+signal.signal(signal.SIGINT, shutdown)
+
 
 def main():
     """Fai partire il bot."""
@@ -879,6 +887,6 @@ if __name__ == '__main__':
     main()
 
     # Inserisce le ultime cacche prima di terminare
-    logging.info("Inserisco le le ultime cacche prima di uscire...")
+    logging.info("Inserisco le ultime cacche prima di uscire...")
     inserisci_cacche()
     logging.info("Bot fermato.")
