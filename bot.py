@@ -120,8 +120,8 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # giorno e ora
 
                 # assumo che nessuno metta il giorno senza mettere l'ora
-                if(re.search("ora: ", user_message, re.IGNORECASE)):
-                    value = re.split("ora: ", user_message, flags=re.IGNORECASE)[1]
+                if(re.search("or[ae]: ", user_message, re.IGNORECASE)):
+                    value = re.split("or[ae]: ", user_message, flags=re.IGNORECASE)[1]
                     ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
                     if(not ora):
                         await update.message.reply_text("Errore: ora non valida.")
@@ -178,35 +178,15 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "CACCA_SI")
         ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Inserisco la cacca...", reply_markup=ReplyKeyboardRemove())
 
-        # Si connette al google sheets ogni volta che scrive
-        # sheets_handler.connect()
-
         roba=context.user_data["roba"]
         cacche.append(roba)
         logging.info(f"Roba da inserire: {roba}")
 
-        # success = sheets_handler.append_data(roba)
-
         # Cancella i messaggi precedenti
 
         await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=[context.user_data["eliminare"],update.message.message_id, ans.message_id])
-        
-        # Se tutto va bene, reagire con "👍"
 
-        # if success:
-        #     await context.bot.set_message_reaction(
-        #         chat_id=update.message.chat_id,
-        #         message_id=context.user_data["messaggio"],
-        #         reaction=[ReactionTypeEmoji("👍")]
-        #     )
-        #     logging.info("Dati cacca salvati.")
-        #     if(context.user_data["aggiornare"]):
-        #         conn.commit()
-        #         logging.info(f"Aggiornati i dati di {roba[0]}: Città: {roba[3]}, Stato: {roba[4]}, Fuso: {context.user_data["fuso"]}")
-        # else:
-        #     await context.bot.send_message(chat_id=update.message.chat_id, text="Qualcosa è andato storto, e l'input è stato ignorato. Riprova.")
-        #     conn.rollback()
-        #     logging.error(f"Dati cacca non salvati, e dati non salvati nel database.")
+        # Se tutto va bene, reagire con "👍"
 
         await context.bot.set_message_reaction(
             chat_id=update.message.chat_id,
@@ -228,7 +208,9 @@ async def cacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "CACCA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
         ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Cacca annullata.", reply_markup=ReplyKeyboardRemove())
         conn.rollback() # Annulla update al database
+
         # Cancella i messaggi precedenti
+
         await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=[context.user_data["eliminare"], context.user_data["messaggio"], update.message.message_id, ans.message_id])
         context.user_data.clear()
         logging.info(f"Dati cacca non salvati, e dati non salvati nel database.")
@@ -453,6 +435,7 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.warning(f"Errore nell'inserimento nel database: {e}")
 
             # Elimina messaggi
+
             await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
             context.user_data.clear()
             logging.info("-"*50)
@@ -471,7 +454,9 @@ async def join_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mess=await update.message.reply_text("Operazione annullata.")
     context.user_data["eliminare"].append(mess.message_id)
     context.user_data["eliminare"].append(context.user_data["messaggio"])
+
     # Elimina messaggi
+
     await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
     context.user_data.clear() # Pulisce i dati salvati precedentemente
     logging.info("Operazione annullata.")
@@ -551,6 +536,7 @@ async def abbandona_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Errore
         await update.message.reply_text(f"Errore nella rimozione.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
         logging.error(f"Errore nella rimozione: {e}")
+
     # Elimina messaggi
     await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
     context.user_data.clear()
@@ -564,7 +550,9 @@ async def abbandona_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["eliminare"].append(update.message.message_id)
     context.user_data["eliminare"].append(mess.message_id)
     context.user_data["eliminare"].append(context.user_data["messaggio"])
+
     # Elimina messaggi
+
     await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
     context.user_data.clear()
     logging.info("Operazione annullata.")
@@ -671,7 +659,9 @@ async def setdato_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["eliminare"].append(update.message.message_id)
     context.user_data["eliminare"].append(mess.message_id)
     context.user_data["eliminare"].append(context.user_data["messaggio"])
+
     # Elimina messaggi
+
     await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
     logging.info("Operazione annullata.")
     logging.info("-"*50)
@@ -799,7 +789,9 @@ def inserisci_cacche():
             logging.error("Errore: cacche non aggiunte.")
     else:
         logging.info("Non ci sono nuove cacche da aggiungere allo spreadsheet.")
-    
+
+
+# Handling dei segnali per far funzionare systemd come Ctrl+C
 def shutdown(signum, frame):
     sys.exit(0)
 
@@ -825,8 +817,8 @@ def main():
 # rmadmin - Rimuovi admin (admin only)
 # mieidati - Visualizza i propri dati
 
-        # Add handlers
 
+        # Handler per i comandi
         application.add_handler(ConversationHandler(
             entry_points=[MessageHandler(filters.Regex("^💩"), cacca_handle)],
             states={
@@ -869,7 +861,7 @@ def main():
         application.add_handler(CommandHandler("rmadmin", rmadmin_command))
         application.add_handler(CommandHandler("mieidati", mieidati_command))
 
-        # Start the Bot
+        # Fa partire il bot
         logging.info("Bot partito...")
         application.run_polling()
     except Exception as e:
@@ -882,7 +874,7 @@ if __name__ == '__main__':
     scheduler = BackgroundScheduler()
     scheduler.add_job(inserisci_cacche, "interval", minutes=60) # Ogni 60 minuti
     scheduler.start()
-    
+
     # Fa partire il loop
     main()
 
