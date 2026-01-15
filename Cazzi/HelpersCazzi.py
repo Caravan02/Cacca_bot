@@ -69,6 +69,8 @@ async def check_admin(update: Update, cursor: sqlite3.Cursor) -> bool:
 def valid_day(date_string: str) -> str:
     if(re.compile(r"^[0-3]\d\/(0\d|1[0-2])\/(\d{2})( )*$").match(date_string)):
         return date_string[0:9]
+    elif(re.compile(r"^[0-3]\d\/(0\d|1[0-2])\/(\d{4})( )*$").match(date_string)):
+        return (date_string[0:6]+date_string[8:10])
     else:
         return
 

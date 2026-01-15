@@ -67,7 +67,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 flag = bool(False)
 
                 # Le keywords sono ora case insensitive
-                # if f"altitudine: " in user_message:
+                
                 if(re.search("altitudine: ", user_message, re.IGNORECASE)):
                     value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
                     altitudine=re.split(r'[,;\n]+',value)[0]

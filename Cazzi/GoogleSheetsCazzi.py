@@ -23,7 +23,6 @@ class GoogleSheetsHandler:
                 raise FileNotFoundError(error_msg)
             
             self.client = gspread.service_account(filename=self.creds_file)
-            self.sheet = self.client.open_by_url(self.spreadsheet_url).worksheet(WORKSHEET_NAME)
 
             self.logger.info("Client di Google sheets inizializzato")
         except Exception as e:
@@ -39,15 +38,6 @@ class GoogleSheetsHandler:
         except Exception as e:
             self.logger.error(f"Connessione allo spreadsheet non riuscita: {e}", exc_info=True)
             raise
-
-    # Un dirty trick clamoroso
-    # def keep_alive(self):
-    #     """Fa una richiesta per tenere in vita la connessione"""
-    #     try:
-    #         _=self.sheet.acell("A1").value
-    #     except:
-    #         self.logger.warning("Connessione allo spreadsheet persa, probabilmente ora è ristabilita.")
-    #         pass
 
     def append_data(self, data):
         """Aggiungi dati al Google Sheets"""
