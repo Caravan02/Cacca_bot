@@ -998,7 +998,7 @@ if __name__ == '__main__':
 
     # Memorizza le cacche e le invia ogni ora in blocco
     scheduler = BackgroundScheduler()
-    scheduler.add_job(inserisci_cacche, "interval", minutes=1) # Ogni 60 minuti
+    scheduler.add_job(inserisci_cacche, "interval", minutes=60) # Ogni 60 minuti
     scheduler.start()
 
     # Fa partire il loop
