@@ -20,15 +20,35 @@ LoggingCazzi.setup_logging()
 # nome varchar(100) NOT NULL UNIQUE,
 # fuso int NOT NULL,
 # admin bool NOT NULL DEFAULT 0,
-# citta varchar(100)
-# stato varchar(100)
+# citta varchar(100),
+# stato varchar(100),
 # PRIMARY KEY (user_id))
 # CREATE UNIQUE INDEX idx_cagatori_user_id ON cagatori(user_id);
 # CREATE UNIQUE INDEX idx_cagatori_nome ON cagatori(nome);
 
+# CREATE TABLE cacche1(
+# nome varchar(100) NOT NULL,
+# giorno varchar(16) NOT NULL,
+# ora varchar(10) NOT NULL,
+# citta varchar(100),
+# stato varchar(100),
+# altitudine varchar(10),
+# velocita varchar(10));
+
+# CREATE TABLE cacche2(
+# nome varchar(100) NOT NULL,
+# giorno varchar(16) NOT NULL,
+# ora varchar(10) NOT NULL,
+# citta varchar(100),
+# stato varchar(100),
+# altitudine varchar(10),
+# velocita varchar(10));
+
 try:
     conn = sqlite3.connect('cagatori.db')
     cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS cacche1(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10));")
+    cursor.execute("CREATE TABLE IF NOT EXISTS cacche2(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10));")
     logging.info("Connesso al database.")
 except sqlite3.Error as e:
     logging.error(f"Errore nella connessione al database: {e}")
@@ -37,8 +57,9 @@ except sqlite3.Error as e:
 # Inizializza Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
 
-# Lista delle cacche da inserire
-cacche=[]
+# # Liste delle cacche da inserire: vengono inserite prima in cacche1, poi dopo un po' vengono spostate in cacche2 e infine scritte sullo spreadsheet.
+# cacche1=[]
+# cacche2=[]
 
 # Comandi Bot
 
@@ -179,7 +200,9 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Inserisco la cacca...", reply_markup=ReplyKeyboardRemove())
 
         roba=context.user_data["roba"]
-        cacche.append(roba)
+        cursor.execute("insert into cacche1 values (?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6]))
+        conn.commit()
+        # cacche1.append(roba)
         logging.info(f"Roba da inserire: {roba}")
 
         # Cancella i messaggi precedenti
@@ -195,7 +218,6 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         logging.info("Dati cacca salvati.")
         if(context.user_data["aggiornare"]):
-            conn.commit()
             logging.info(f"Aggiornati i dati di {roba[0]}: Città: {roba[3]}, Stato: {roba[4]}, Fuso: {context.user_data["fuso"]}")
 
         context.user_data.clear()
@@ -235,10 +257,12 @@ Lista dei comandi:
 /rimuovi - Rimuovi cagatore (admin only)
 /abbandona - Smetti di essere un cagatore
 /setdato - Aggiorna un proprio dato
+/rmcacca - Visualizza e rimuovi le ultime cacche inserite
 /cagatori - Lista tutti i cagatori
 /addadmin - Nomina admin (admin only)
 /rmadmin - Rimuovi admin (admin only)
 /mieidati - Visualizza i propri dati
+/annulla - Annulla il comando corrente
         """)
             logging.info("Lista dei comandi mandata.")
         logging.info("-"*50)
@@ -663,6 +687,79 @@ async def setdato_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Elimina messaggi
 
     await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+    context.user_data.clear() # Pulisce i dati raccolti
+    logging.info("Operazione annullata.")
+    logging.info("-"*50)
+    return ConversationHandler.END
+
+# /rmcacca
+async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "RMCACCA_COMMAND")
+        if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
+            user_id=update.message.from_user.id
+            nome=cursor.execute("select nome from cagatori where user_id=?", (user_id,)).fetchone()[0]
+            ultime_cacche=cursor.execute("select * from cacche1 where nome=?", (nome,)).fetchall()
+            ultime_cacche+=cursor.execute("select * from cacche2 where nome=?", (nome,)).fetchall()
+            if(ultime_cacche):
+                messaggio="Le tue cacche recenti sono:\n\n"
+                i=1
+                for cacca in ultime_cacche:
+                    messaggio+=f"{i}: {cacca}\n"
+                    i=i+1
+                messaggio+="\nInserire il numero della cacca da cancellare, /annulla per annullare.\n"
+                mess=await update.message.reply_text(messaggio)
+                logging.info("Mandato messaggio con le cacche recenti.")
+                context.user_data["cacche"]=ultime_cacche
+                context.user_data["messaggio"]=update.message.message_id
+                context.user_data["eliminare"]=[mess.message_id]
+                return 1
+            else:
+                await update.message.reply_text("Non hai inserito cacche di recente.")
+                logging.info("Non ci sono cacche dell'utente in cacca1 e cacca2.")
+                logging.info("-"*50)
+                return ConversationHandler.END
+        else:
+            logging.info("-"*50)
+            return ConversationHandler.END
+        
+# Legge il numero inserito ed elimina
+
+async def rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "RMCACCA_RIMUOVI", f"Messaggio: {update.message.text}")
+        context.user_data["eliminare"].append(update.message.message_id)
+        i=int(update.message.text)-1
+        cacche=context.user_data["cacche"]
+        if(i>=0 and i<len(cacche)):
+            cursor.execute("delete from cacche1 where nome=? and giorno=? and ora=? and citta=? and stato=? and altitudine=? and velocita=?", cacche[i])
+            cursor.execute("delete from cacche2 where nome=? and giorno=? and ora=? and citta=? and stato=? and altitudine=? and velocita=?", cacche[i])
+            conn.commit()
+            mess=await update.message.reply_text("Cacca rimossa con successo.")
+            context.user_data["eliminare"].append(mess.message_id)
+            context.user_data["eliminare"].append(context.user_data["messaggio"])
+            await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+            context.user_data.clear() # Pulisce i dati raccolti
+            logging.info(f"Cacca rimossa con successo: {cacche[i]}")
+            logging.info("-"*50)
+            return ConversationHandler.END
+        else:
+            mess=await update.message.reply_text("Il numero inserito non è valido, riprova.")
+            context.user_data["eliminare"].append(mess.message_id)
+            return 1
+
+# /annulla
+async def rmcacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    LoggingCazzi.log_user_activity(update, "RMCACCA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
+    mess=await update.message.reply_text("Operazione annullata.")
+    context.user_data["eliminare"].append(update.message.message_id)
+    context.user_data["eliminare"].append(mess.message_id)
+    context.user_data["eliminare"].append(context.user_data["messaggio"])
+
+    # Elimina messaggi
+
+    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+    context.user_data.clear() # Pulisce i dati raccolti
     logging.info("Operazione annullata.")
     logging.info("-"*50)
     return ConversationHandler.END
@@ -780,15 +877,35 @@ async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def inserisci_cacche():
-    """Inserisce le cacche nello spreadsheet"""
-    if(cacche):
+    """Inserisce le cacche nello spreadsheet e gestisce la coda"""
+    # Fa la connessione al database per evitare casini.
+    try:
+        lconn = sqlite3.connect('cagatori.db')
+        lcursor = lconn.cursor()
+    except sqlite3.Error as e:
+        logging.error(f"Errore nella connessione al database: {e}")
+        raise
+
+    # Inserisce cacche nello spreadsheet
+    lcursor.execute("select * from cacche2")
+    cacche2=lcursor.fetchall()
+    problemi=False
+    if(cacche2):
         sheets_handler.connect()
-        if sheets_handler.append_data(cacche):
-            cacche.clear()
-        else:
+        if not sheets_handler.append_data(cacche2):
+            problemi=True
             logging.error("Errore: cacche non aggiunte.")
+        else:
+            lcursor.execute("delete from cacche2")
+            lconn.commit()
     else:
         logging.info("Non ci sono nuove cacche da aggiungere allo spreadsheet.")
+
+    # Cambia i nomi delle tabelle in modo da gestire la coda.
+    if not problemi:
+        lcursor.execute("alter table cacche2 rename to bvfduw9ieafwbu")
+        lcursor.execute("alter table cacche1 rename to cacche2")
+        lcursor.execute("alter table bvfduw9ieafwbu rename to cacche1")
 
 
 # Handling dei segnali per far funzionare systemd come Ctrl+C
@@ -812,10 +929,12 @@ def main():
 # rimuovi - Rimuovi cagatore (admin only)
 # abbandona - Smetti di essere un cagatore
 # setdato - Aggiorna un proprio dato
+# rmcacca - Visualizza e rimuovi le ultime cacche inserite
 # cagatori - Lista tutti i cagatori
 # addadmin - Nomina admin (admin only)
 # rmadmin - Rimuovi admin (admin only)
 # mieidati - Visualizza i propri dati
+# annulla - Annulla il comando corrente
 
 
         # Handler per i comandi
@@ -849,6 +968,13 @@ def main():
             fallbacks=[MessageHandler(filters.TEXT, abbandona_annulla)],
         ))
         application.add_handler(ConversationHandler(
+            entry_points=[CommandHandler("rmcacca", rmcacca_command)],
+            states={
+                1: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi)]
+            },
+            fallbacks=[MessageHandler(filters.TEXT, rmcacca_annulla)],
+        ))
+        application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("setdato", setdato_command)],
             states={
                 1: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT, setdato_annulla)],
@@ -872,13 +998,13 @@ if __name__ == '__main__':
 
     # Memorizza le cacche e le invia ogni ora in blocco
     scheduler = BackgroundScheduler()
-    scheduler.add_job(inserisci_cacche, "interval", minutes=60) # Ogni 60 minuti
+    scheduler.add_job(inserisci_cacche, "interval", minutes=1) # Ogni 60 minuti
     scheduler.start()
 
     # Fa partire il loop
     main()
 
     # Inserisce le ultime cacche prima di terminare
-    logging.info("Inserisco le ultime cacche prima di uscire...")
-    inserisci_cacche()
+    # logging.info("Inserisco le ultime cacche prima di uscire...")
+    # inserisci_cacche()
     logging.info("Bot fermato.")
