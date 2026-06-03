@@ -33,7 +33,8 @@ LoggingCazzi.setup_logging()
 # citta varchar(100),
 # stato varchar(100),
 # altitudine varchar(10),
-# velocita varchar(10));
+# velocita varchar(10)
+# messaggio int NOT NULL);
 
 # CREATE TABLE cacche2(
 # nome varchar(100) NOT NULL,
@@ -42,13 +43,16 @@ LoggingCazzi.setup_logging()
 # citta varchar(100),
 # stato varchar(100),
 # altitudine varchar(10),
-# velocita varchar(10));
+# velocita varchar(10)
+# messaggio int NOT NULL);
+
+# Tabelle delle cacche da inserire: vengono inserite prima in cacche1, poi dopo un po' vengono spostate in cacche2 e infine scritte sullo spreadsheet.
 
 try:
     conn = sqlite3.connect('cagatori.db')
     cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS cacche1(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10));")
-    cursor.execute("CREATE TABLE IF NOT EXISTS cacche2(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10));")
+    cursor.execute("CREATE TABLE IF NOT EXISTS cacche1(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10), messaggio int NOT NULL);")
+    cursor.execute("CREATE TABLE IF NOT EXISTS cacche2(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10), messaggio int NOT NULL);")
     logging.info("Connesso al database.")
 except sqlite3.Error as e:
     logging.error(f"Errore nella connessione al database: {e}")
@@ -56,10 +60,6 @@ except sqlite3.Error as e:
 
 # Inizializza Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
-
-# # Liste delle cacche da inserire: vengono inserite prima in cacche1, poi dopo un po' vengono spostate in cacche2 e infine scritte sullo spreadsheet.
-# cacche1=[]
-# cacche2=[]
 
 # Comandi Bot
 
@@ -200,9 +200,8 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Inserisco la cacca...", reply_markup=ReplyKeyboardRemove())
 
         roba=context.user_data["roba"]
-        cursor.execute("insert into cacche1 values (?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6]))
+        cursor.execute("insert into cacche1 values (?, ?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6], context.user_data["messaggio"]))
         conn.commit()
-        # cacche1.append(roba)
         logging.info(f"Roba da inserire: {roba}")
 
         # Cancella i messaggi precedenti
@@ -705,7 +704,7 @@ async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 messaggio="Le tue cacche recenti sono:\n\n"
                 i=1
                 for cacca in ultime_cacche:
-                    messaggio+=f"{i}: {cacca}\n"
+                    messaggio+=f"{i}: {cacca[0:7]} \n"
                     i=i+1
                 messaggio+="\nInserire il numero della cacca da cancellare, /annulla per annullare.\n"
                 mess=await update.message.reply_text(messaggio)
@@ -732,12 +731,14 @@ async def rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         i=int(update.message.text)-1
         cacche=context.user_data["cacche"]
         if(i>=0 and i<len(cacche)):
-            cursor.execute("delete from cacche1 where nome=? and giorno=? and ora=? and citta=? and stato=? and altitudine=? and velocita=?", cacche[i])
-            cursor.execute("delete from cacche2 where nome=? and giorno=? and ora=? and citta=? and stato=? and altitudine=? and velocita=?", cacche[i])
+            messid=int(cacche[i][7])
+            cursor.execute("delete from cacche1 where messaggio=?", (messid,))
+            cursor.execute("delete from cacche2 where messaggio=?", (messid,))
             conn.commit()
             mess=await update.message.reply_text("Cacca rimossa con successo.")
             context.user_data["eliminare"].append(mess.message_id)
             context.user_data["eliminare"].append(context.user_data["messaggio"])
+            context.user_data["eliminare"].append(messid) # Rinuove messaggio con la cacca
             await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
             context.user_data.clear() # Pulisce i dati raccolti
             logging.info(f"Cacca rimossa con successo: {cacche[i]}")
