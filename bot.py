@@ -888,7 +888,8 @@ def inserisci_cacche():
         raise
 
     # Inserisce cacche nello spreadsheet
-    lcursor.execute("select * from cacche2")
+
+    lcursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche2")
     cacche2=lcursor.fetchall()
     problemi=False
     if(cacche2):
