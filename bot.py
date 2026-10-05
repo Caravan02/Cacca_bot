@@ -4,7 +4,7 @@ import logging
 from telegram import Update, ReactionTypeEmoji, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters, ContextTypes
 import re
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 import sqlite3
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -26,7 +26,7 @@ LoggingCazzi.setup_logging()
 # CREATE UNIQUE INDEX idx_cagatori_user_id ON cagatori(user_id);
 # CREATE UNIQUE INDEX idx_cagatori_nome ON cagatori(nome);
 
-# CREATE TABLE cacche1(
+# CREATE TABLE cacche(
 # nome varchar(100) NOT NULL,
 # giorno varchar(16) NOT NULL,
 # ora varchar(10) NOT NULL,
@@ -34,25 +34,16 @@ LoggingCazzi.setup_logging()
 # stato varchar(100),
 # altitudine varchar(10),
 # velocita varchar(10)
-# messaggio int NOT NULL);
+# messaggio int NOT NULL,
+# timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+# CREATE UNIQUE INDEX idx_cacche_timestamp ON cacche(timestamp);
 
-# CREATE TABLE cacche2(
-# nome varchar(100) NOT NULL,
-# giorno varchar(16) NOT NULL,
-# ora varchar(10) NOT NULL,
-# citta varchar(100),
-# stato varchar(100),
-# altitudine varchar(10),
-# velocita varchar(10)
-# messaggio int NOT NULL);
-
-# Tabelle delle cacche da inserire: vengono inserite prima in cacche1, poi dopo un po' vengono spostate in cacche2 e infine scritte sullo spreadsheet.
+# Tabella delle cacche da inserire.
 
 try:
     conn = sqlite3.connect('cagatori.db')
     cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS cacche1(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10), messaggio int NOT NULL);")
-    cursor.execute("CREATE TABLE IF NOT EXISTS cacche2(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10), messaggio int NOT NULL);")
+    cursor.execute("CREATE TABLE IF NOT EXISTS cacche(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10), messaggio int NOT NULL, timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);")
     logging.info("Connesso al database.")
 except sqlite3.Error as e:
     logging.error(f"Errore nella connessione al database: {e}")
@@ -200,7 +191,8 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Inserisco la cacca...", reply_markup=ReplyKeyboardRemove())
 
         roba=context.user_data["roba"]
-        cursor.execute("insert into cacche1 values (?, ?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6], context.user_data["messaggio"]))
+        # cursor.execute("insert into cacche1 values (?, ?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6], context.user_data["messaggio"]))
+        cursor.execute("insert into cacche (nome, giorno, ora, citta, stato, altitudine, velocita, messaggio) values (?, ?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6], context.user_data["messaggio"]))
         conn.commit()
         logging.info(f"Roba da inserire: {roba}")
 
@@ -699,13 +691,12 @@ async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
             user_id=update.message.from_user.id
             nome=cursor.execute("select nome from cagatori where user_id=?", (user_id,)).fetchone()[0]
-            ultime_cacche=cursor.execute("select * from cacche1 where nome=?", (nome,)).fetchall()
-            ultime_cacche+=cursor.execute("select * from cacche2 where nome=?", (nome,)).fetchall()
+            ultime_cacche=cursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche where nome=?", (nome,)).fetchall()
             if(ultime_cacche):
                 messaggio="Le tue cacche recenti sono:\n\n"
                 i=1
                 for cacca in ultime_cacche:
-                    messaggio+=f"{i}: {cacca[0:7]} \n"
+                    messaggio+=f"{i}: {cacca} \n"
                     i=i+1
                 messaggio+="\nInserire il numero della cacca da cancellare, /annulla per annullare.\n"
                 mess=await update.message.reply_text(messaggio)
@@ -716,7 +707,7 @@ async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return 1
             else:
                 await update.message.reply_text("Non hai inserito cacche di recente.")
-                logging.info("Non ci sono cacche dell'utente in cacca1 e cacca2.")
+                logging.info("Non ci sono cacche dell'utente nella tabella cacche.")
                 logging.info("-"*50)
                 return ConversationHandler.END
         else:
@@ -733,8 +724,7 @@ async def rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cacche=context.user_data["cacche"]
         if(i>=0 and i<len(cacche)):
             messid=int(cacche[i][7])
-            cursor.execute("delete from cacche1 where messaggio=?", (messid,))
-            cursor.execute("delete from cacche2 where messaggio=?", (messid,))
+            cursor.execute("delete from cacche where messaggio=?", (messid,))
             conn.commit()
             mess=await update.message.reply_text("Cacca rimossa con successo.")
             context.user_data["eliminare"].append(mess.message_id)
@@ -889,26 +879,21 @@ def inserisci_cacche():
         raise
 
     # Inserisce cacche nello spreadsheet
-
-    lcursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche2")
-    cacche2=lcursor.fetchall()
-    problemi=False
-    if(cacche2):
+    ieri = datetime.now(timezone.utc) - timedelta(days=1)
+    ieri_iso = ieri.strftime("%Y-%m-%d %H:%M:%S")
+    lcursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche where timestamp <= ?", (ieri_iso,))
+    cacche=lcursor.fetchall()
+    # problemi=False
+    if(cacche):
         sheets_handler.connect()
-        if not sheets_handler.append_data(cacche2):
-            problemi=True
+        if not sheets_handler.append_data(cacche):
+            # problemi=True
             logging.error("Errore: cacche non aggiunte.")
         else:
-            lcursor.execute("delete from cacche2")
+            lcursor.execute("delete from cacche where timestamp <= ?", (ieri_iso,))
             lconn.commit()
     else:
         logging.info("Non ci sono nuove cacche da aggiungere allo spreadsheet.")
-
-    # Cambia i nomi delle tabelle in modo da gestire la coda.
-    if not problemi:
-        lcursor.execute("alter table cacche2 rename to bvfduw9ieafwbu")
-        lcursor.execute("alter table cacche1 rename to cacche2")
-        lcursor.execute("alter table bvfduw9ieafwbu rename to cacche1")
 
 
 # Handling dei segnali per far funzionare systemd come Ctrl+C
