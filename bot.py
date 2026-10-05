@@ -34,7 +34,7 @@ LoggingCazzi.setup_logging()
 # stato TEXT,
 # altitudine TEXT,
 # velocita TEXT,
-# messaggio int NOT NULL,
+# messaggio int NOT NULL UNIQUE,
 # timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 # CREATE INDEX idx_cacche_timestamp ON cacche(timestamp);
 
@@ -690,12 +690,12 @@ async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
             user_id=update.message.from_user.id
             nome=cursor.execute("select nome from cagatori where user_id=?", (user_id,)).fetchone()[0]
-            ultime_cacche=cursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche where nome=?", (nome,)).fetchall()
+            ultime_cacche=cursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita, messaggio from cacche where nome=?", (nome,)).fetchall()
             if(ultime_cacche):
                 messaggio="Le tue cacche recenti sono:\n\n"
                 i=1
                 for cacca in ultime_cacche:
-                    messaggio+=f"{i}: {cacca} \n"
+                    messaggio+=f"{i}: {cacca[0:7]} \n"
                     i=i+1
                 messaggio+="\nInserire il numero della cacca da cancellare, /annulla per annullare.\n"
                 mess=await update.message.reply_text(messaggio)
