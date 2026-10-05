@@ -16,34 +16,33 @@ LoggingCazzi.setup_logging()
 
 # Connessione al database
 # CREATE TABLE cagatori(
-# user_id int NOT NULL,
-# nome varchar(100) NOT NULL UNIQUE,
+# user_id int NOT NULL UNIQUE,
+# nome TEXT NOT NULL UNIQUE,
 # fuso int NOT NULL,
 # admin bool NOT NULL DEFAULT 0,
-# citta varchar(100),
-# stato varchar(100),
-# PRIMARY KEY (user_id))
+# citta TEXT,
+# stato TEXT,
+# PRIMARY KEY (user_id));
 # CREATE UNIQUE INDEX idx_cagatori_user_id ON cagatori(user_id);
 # CREATE UNIQUE INDEX idx_cagatori_nome ON cagatori(nome);
 
 # CREATE TABLE cacche(
-# nome varchar(100) NOT NULL,
-# giorno varchar(16) NOT NULL,
-# ora varchar(10) NOT NULL,
-# citta varchar(100),
-# stato varchar(100),
-# altitudine varchar(10),
-# velocita varchar(10)
+# nome TEXT NOT NULL,
+# giorno TEXT NOT NULL,
+# ora TEXT NOT NULL,
+# citta TEXT,
+# stato TEXT,
+# altitudine TEXT,
+# velocita TEXT,
 # messaggio int NOT NULL,
 # timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-# CREATE UNIQUE INDEX idx_cacche_timestamp ON cacche(timestamp);
+# CREATE INDEX idx_cacche_timestamp ON cacche(timestamp);
 
 # Tabella delle cacche da inserire.
 
 try:
     conn = sqlite3.connect('cagatori.db')
     cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS cacche(nome varchar(100) NOT NULL, giorno varchar(16) NOT NULL, ora varchar(10) NOT NULL, citta varchar(100), stato varchar(100), altitudine varchar(10), velocita varchar(10), messaggio int NOT NULL, timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);")
     logging.info("Connesso al database.")
 except sqlite3.Error as e:
     logging.error(f"Errore nella connessione al database: {e}")
@@ -879,15 +878,14 @@ def inserisci_cacche():
         raise
 
     # Inserisce cacche nello spreadsheet
+    # Inserisce quelle più vecchie di un giorno
     ieri = datetime.now(timezone.utc) - timedelta(days=1)
     ieri_iso = ieri.strftime("%Y-%m-%d %H:%M:%S")
     lcursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche where timestamp <= ?", (ieri_iso,))
     cacche=lcursor.fetchall()
-    # problemi=False
     if(cacche):
         sheets_handler.connect()
         if not sheets_handler.append_data(cacche):
-            # problemi=True
             logging.error("Errore: cacche non aggiunte.")
         else:
             lcursor.execute("delete from cacche where timestamp <= ?", (ieri_iso,))
