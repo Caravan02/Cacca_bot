@@ -316,6 +316,7 @@ Esempio che usa ogni campo:
 "💩
 giorno: 03/03/25
 ORA: 04.20
+fusO: +1
 Città: Sale Marasino
 StAtO: Italia
 altituDINE: 250
