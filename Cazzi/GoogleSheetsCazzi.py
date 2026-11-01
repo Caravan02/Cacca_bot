@@ -1,6 +1,8 @@
 import os
 import logging
 import gspread
+import sqlite3
+from datetime import datetime, timezone, timedelta
 
 from Cazzi.CostantiCazzi import WORKSHEET_NAME
 
@@ -51,3 +53,29 @@ class GoogleSheetsHandler:
         except Exception as e:
             self.logger.error(f"Errore nell'aggiungere dati: {e}", exc_info=True)
             return False
+
+    def inserisci_cacche(self):
+        """Inserisce le cacche nello spreadsheet e gestisce la coda"""
+        # Fa la connessione al database per evitare casini.
+        try:
+            lconn = sqlite3.connect('cagatori.db')
+            lcursor = lconn.cursor()
+        except sqlite3.Error as e:
+            logging.error(f"Errore nella connessione al database: {e}")
+            raise
+
+        # Inserisce cacche nello spreadsheet
+        # Inserisce quelle più vecchie di un giorno
+        ieri = datetime.now(timezone.utc) - timedelta(days=1)
+        ieri_iso = ieri.strftime("%Y-%m-%d %H:%M:%S")
+        lcursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche where timestamp <= ?", (ieri_iso,))
+        cacche=lcursor.fetchall()
+        if(cacche):
+            GoogleSheetsHandler.connect(self)
+            if not GoogleSheetsHandler.append_data(self, cacche):
+                logging.error("Errore: cacche non aggiunte.")
+            else:
+                lcursor.execute("delete from cacche where timestamp <= ?", (ieri_iso,))
+                lconn.commit()
+        else:
+            logging.info("Non ci sono nuove cacche da aggiungere allo spreadsheet.")
