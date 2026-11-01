@@ -4,7 +4,7 @@ import gspread
 import sqlite3
 from datetime import datetime, timezone, timedelta
 
-from Cazzi.CostantiCazzi import WORKSHEET_NAME
+from Cazzi.CostantiCazzi import WORKSHEET_NAME, TEMPO_PER_RMCACCA
 
 class GoogleSheetsHandler:
     def __init__(self, creds_file, spreadsheet_url):
@@ -66,7 +66,7 @@ class GoogleSheetsHandler:
 
         # Inserisce cacche nello spreadsheet
         # Inserisce quelle più vecchie di un giorno
-        ieri = datetime.now(timezone.utc) - timedelta(days=1)
+        ieri = datetime.now(timezone.utc) - timedelta(minutes=TEMPO_PER_RMCACCA)
         ieri_iso = ieri.strftime("%Y-%m-%d %H:%M:%S")
         lcursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche where timestamp <= ?", (ieri_iso,))
         cacche=lcursor.fetchall()

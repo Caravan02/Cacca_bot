@@ -9,7 +9,7 @@ import sqlite3
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from Cazzi import LoggingCazzi, GoogleSheetsCazzi, HelpersCazzi
-from Cazzi.CostantiCazzi import GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL, TELEGRAM_BOT_TOKEN
+from Cazzi.CostantiCazzi import GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL, TELEGRAM_BOT_TOKEN, FREQUENZA_CHECK
 
 # Inizializza logging
 LoggingCazzi.setup_logging()
@@ -957,10 +957,10 @@ if __name__ == '__main__':
 
     # Memorizza le cacche e le invia ogni ora in blocco
     scheduler = BackgroundScheduler()
-    scheduler.add_job(sheets_handler.inserisci_cacche, "interval", minutes=1) # Ogni 60 minuti
+    scheduler.add_job(sheets_handler.inserisci_cacche, "interval", minutes=FREQUENZA_CHECK)
     scheduler.start()
 
     # Fa partire il loop
     main()
-    
+
     logging.info("Bot fermato.")
