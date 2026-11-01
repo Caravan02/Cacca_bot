@@ -230,34 +230,6 @@ async def cacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
 
-# /comandi
-async def comandi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Manda la lista dei comandi"""
-    if(update.message):
-        LoggingCazzi.log_user_activity(update, "COMANDI_COMMAND")
-        if HelpersCazzi.check_gruppo_o_admin(update, cursor):
-            await update.message.reply_text("""
-Lista dei comandi:
-
-/help - Visualizza un messaggio di aiuto
-/comandi - Manda una lista dei comandi
-/sintassi - Visualizza sintassi dei messaggi di cacca
-/aggiungi - Aggiungi cagatore (admin only)
-/join - Diventa un cagatore
-/rimuovi - Rimuovi cagatore (admin only)
-/abbandona - Smetti di essere un cagatore
-/setdato - Aggiorna un proprio dato
-/rmcacca - Visualizza e rimuovi le ultime cacche inserite
-/cagatori - Lista tutti i cagatori
-/addadmin - Nomina admin (admin only)
-/rmadmin - Rimuovi admin (admin only)
-/mieidati - Visualizza i propri dati
-/annulla - Annulla il comando corrente
-        """)
-            logging.info("Lista dei comandi mandata.")
-        logging.info("-"*50)
-
-
 # /help
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Manda messaggio di aiuto"""
@@ -288,67 +260,31 @@ Altre cose:
         logging.info("-"*50)
 
 
-# /sintassi
-async def sintassi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Mostra sintassi per i messaggi di cacca"""
+# /comandi
+async def comandi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Manda la lista dei comandi"""
     if(update.message):
-        LoggingCazzi.log_user_activity(update, "SINTASSI_COMMAND")
-        if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
-            # Messaggio
+        LoggingCazzi.log_user_activity(update, "COMANDI_COMMAND")
+        if HelpersCazzi.check_gruppo_o_admin(update, cursor):
             await update.message.reply_text("""
-Sintassi per i messaggi di cacca:
+Lista dei comandi:
 
-· Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
-· Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "keyword: valore".
-Le keyword accettate sono: Giorno, Ora, Città, Stato, Altitudine, Velocità (l'altitudine è da considerarsi in metri slm e la velocità in km/h) e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
-Le keyword sono case-insensitive. Le keyword non riconosciute saranno ignorate. L'ordine non è importante.
-
-Esempio che usa ogni campo:
-"💩
-giorno: 03/03/25
-ORA: 04.20
-fusO: +1
-Città: Sale Marasino
-StAtO: Italia
-altituDINE: 250
-VELOcità: 340"
-    """)
-
-            logging.info("Mandato messaggio con la sintassi.")
-        logging.info("-"*50)
-
-
-# /aggiungi - Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>
-# C'è il bug degli spazi: non si possono mettere città, nomi o stati con uno spazio.
-async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Aggiungi cagatore"""
-    if(update.message):
-        LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND", f"args: {context.args}")
-        # Solo admin
-        if(await HelpersCazzi.check_admin(update, cursor)):
-            # Controlla il numero di argomenti e che gli argomenti siano validi
-            if (len(context.args)==5 and HelpersCazzi.is_integer(context.args[0]) and HelpersCazzi.is_integer(context.args[2]) and not context.args[1].startswith("=") and not context.args[3].startswith("=") and not context.args[4].startswith("=")):
-
-                try:
-                    # Inserisce i dati nel database
-                    user_id=(int)(context.args[0])
-                    nome=context.args[1]
-                    fuso=(int)(context.args[2])
-                    citta=context.args[3]
-                    stato=context.args[4]
-                    cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato)) # Inserisce come non_admin.
-                    await update.message.reply_text(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
-                    logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
-                    conn.commit()
-                except sqlite3.Error as e:
-                    # Errore
-                    await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id.")
-                    logging.warning(f"Errore nell'inserimento nel database: {e}")
-
-            else:
-                # Spiega la sintassi
-                await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>")
-                logging.info("Spiegata la sintassi di /aggiungi")
+/help - Visualizza un messaggio di aiuto
+/comandi - Manda una lista dei comandi
+/join - Diventa un cagatore
+/sintassi - Visualizza sintassi dei messaggi di cacca
+/mieidati - Visualizza i propri dati
+/setdato - Aggiorna un proprio dato
+/rmcacca - Visualizza e rimuovi le ultime cacche inserite
+/cagatori - Lista tutti i cagatori
+/abbandona - Smetti di essere un cagatore
+/annulla - Annulla il comando corrente
+/aggiungi - Aggiungi cagatore (admin only)
+/rimuovi - Rimuovi cagatore (admin only)
+/addadmin - Nomina admin (admin only)
+/rmadmin - Rimuovi admin (admin only)
+        """)
+            logging.info("Lista dei comandi mandata.")
         logging.info("-"*50)
 
 
@@ -479,100 +415,59 @@ async def join_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-# /rimuovi - Sintassi: /rimuovi <nome>
-# C'è il bug degli spazi: non si può inserire un nome con degli spazi
-async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Rimuovi cagatore"""
+# /sintassi
+async def sintassi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Mostra sintassi per i messaggi di cacca"""
     if(update.message):
-        LoggingCazzi.log_user_activity(update, "RIMUOVI_COMMAND", f"args: {context.args}")
-        # Solo admin
-        if(await HelpersCazzi.check_admin(update, cursor)):
-            # Controlla il numero di argomenti
-            if (len(context.args)==1):
-                # Tutto implementato con un bel database sql
-                try:
-                    nome=context.args[0]
-                    # Controlla che il cagatore esista
-                    if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
-                        # Rimuove dal database
-                        cursor.execute("delete from cagatori where nome=?", (nome,))
-                        await update.message.reply_text(f"Rimosso il cagatore {nome}.")
-                        logging.info(f"Rimosso cagatore {nome}.")
-                        conn.commit()
-                    else:
-                        # Errore
-                        await update.message.reply_text(f"Il cagatore {nome} non esiste.")
-                        logging.warning(f"Il cagatore {nome} non esiste.")
-                except sqlite3.Error as e:
-                    await update.message.reply_text(f"Errore nella rimozione.")
-                    logging.error(f"Errore nella rimozione: {e}")
-            else:
-                await update.message.reply_text("Sintassi: /rimuovi <nome>")
-                logging.info("Spiegata la sintassi di /rimuovi")
+        LoggingCazzi.log_user_activity(update, "SINTASSI_COMMAND")
+        if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
+            # Messaggio
+            await update.message.reply_text("""
+Sintassi per i messaggi di cacca:
+
+· Il messaggio deve iniziare con "💩", altrimenti non verrà contato.
+· Il messaggio può contenere informazioni extra, basta metterla all'interno del messaggio nella seguente forma: "keyword: valore".
+Le keyword accettate sono: Giorno, Ora, Città, Stato, Altitudine, Velocità (l'altitudine è da considerarsi in metri slm e la velocità in km/h) e le coppie "Keyword: valore" devono essere separate da "," ";" o "<a capo>".
+Le keyword sono case-insensitive. Le keyword non riconosciute saranno ignorate. L'ordine non è importante.
+
+Esempio che usa ogni campo:
+"💩
+giorno: 03/03/25
+ORA: 04.20
+fusO: +1
+Città: Sale Marasino
+StAtO: Italia
+altituDINE: 250
+VELOcità: 340"
+    """)
+
+            logging.info("Mandato messaggio con la sintassi.")
         logging.info("-"*50)
 
 
-# /abbandona
-async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Abbandona la cacca"""
+# /mieidati
+async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Visualizza i miei dati"""
     if(update.message):
-        LoggingCazzi.log_user_activity(update, "ABBANDONA_COMMAND")
+        LoggingCazzi.log_user_activity(update, "MIEIDATI_COMMAND")
         if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
-            context.user_data["messaggio"]=update.message.message_id
-            # Tastiera con le opzioni
-            keyboard=[["Sì", "No"]]
-
-            # Chiede conferma
-            mess=await update.message.reply_text(
-                "Vuoi davvero uscire dal database? Le tue cacche non verranno più registrate.",
-                reply_markup=ReplyKeyboardMarkup(
-                    keyboard, one_time_keyboard=True, resize_keyboard=True, selective=True
-                ),
-            )
-            context.user_data["eliminare"]=[mess.message_id]
-            return 1
-        else:
-            logging.info("-"*50)
-            return ConversationHandler.END
-    logging.info("-"*50)
-
-# Se dice sì, abbandona
-async def abbandona_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    LoggingCazzi.log_user_activity(update, "ABBANDONA_SI")
-    context.user_data["eliminare"].append(update.message.message_id)
-    try:
-        # Rimuovi dal database
-        user_id = update.message.from_user.id
-        cursor.execute("delete from cagatori where user_id=?", (user_id,))
-        await update.message.reply_text(f"Addio, ci mancherai! 😢", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
-        logging.info(f"Il cagatore {user_id} se n'è andato e non ritorna più.")
-        conn.commit()
-    except sqlite3.Error as e:
-        # Errore
-        await update.message.reply_text(f"Errore nella rimozione.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
-        logging.error(f"Errore nella rimozione: {e}")
-
-    # Elimina messaggi
-    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
-    context.user_data.clear()
-    logging.info("-"*50)
-    return ConversationHandler.END
-
-# Annulla
-async def abbandona_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    LoggingCazzi.log_user_activity(update, "ABBANDONA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
-    mess=await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
-    context.user_data["eliminare"].append(update.message.message_id)
-    context.user_data["eliminare"].append(mess.message_id)
-    context.user_data["eliminare"].append(context.user_data["messaggio"])
-
-    # Elimina messaggi
-
-    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
-    context.user_data.clear()
-    logging.info("Operazione annullata.")
-    logging.info("-"*50)
-    return ConversationHandler.END
+            try:
+                # Prende i dati del cagatore
+                user_id = update.message.from_user.id
+                cursor.execute("select nome, admin, fuso, citta, stato from cagatori where user_id=?", (user_id,))
+                dati=cursor.fetchone()
+                if(dati[1]): # Se è admin
+                    messaggio = f"Nome: <b>{dati[0]}</b>\n"
+                else:
+                    messaggio = f"Nome: {dati[0]}\n"
+                messaggio += f"Fuso: {dati[2]}\nCittà: {dati[3]}\nStato: {dati[4]}\n"
+                await update.message.reply_text(messaggio, parse_mode='HTML') # Per scrivere in grassetto gli admin
+                logging.info(f"Mandati dati di {dati[0]}")
+            except sqlite3.Error as e:
+                # Errore
+                await update.message.reply_text(f"Errore nel recuperare i dati.")
+                logging.error(f"Errore. {e}")
+        logging.info("-"*50)
 
 
 # /setdato
@@ -782,6 +677,136 @@ async def cagatori_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info("-"*50)
 
 
+# /abbandona
+async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Abbandona la cacca"""
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "ABBANDONA_COMMAND")
+        if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
+            context.user_data["messaggio"]=update.message.message_id
+            # Tastiera con le opzioni
+            keyboard=[["Sì", "No"]]
+
+            # Chiede conferma
+            mess=await update.message.reply_text(
+                "Vuoi davvero uscire dal database? Le tue cacche non verranno più registrate.",
+                reply_markup=ReplyKeyboardMarkup(
+                    keyboard, one_time_keyboard=True, resize_keyboard=True, selective=True
+                ),
+            )
+            context.user_data["eliminare"]=[mess.message_id]
+            return 1
+        else:
+            logging.info("-"*50)
+            return ConversationHandler.END
+    logging.info("-"*50)
+
+# Se dice sì, abbandona
+async def abbandona_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    LoggingCazzi.log_user_activity(update, "ABBANDONA_SI")
+    context.user_data["eliminare"].append(update.message.message_id)
+    try:
+        # Rimuovi dal database
+        user_id = update.message.from_user.id
+        cursor.execute("delete from cagatori where user_id=?", (user_id,))
+        await update.message.reply_text(f"Addio, ci mancherai! 😢", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+        logging.info(f"Il cagatore {user_id} se n'è andato e non ritorna più.")
+        conn.commit()
+    except sqlite3.Error as e:
+        # Errore
+        await update.message.reply_text(f"Errore nella rimozione.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+        logging.error(f"Errore nella rimozione: {e}")
+
+    # Elimina messaggi
+    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+    context.user_data.clear()
+    logging.info("-"*50)
+    return ConversationHandler.END
+
+# Annulla
+async def abbandona_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    LoggingCazzi.log_user_activity(update, "ABBANDONA_ANNULLA", f"Messaggio: {update.message.text[:50]}")
+    mess=await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+    context.user_data["eliminare"].append(update.message.message_id)
+    context.user_data["eliminare"].append(mess.message_id)
+    context.user_data["eliminare"].append(context.user_data["messaggio"])
+
+    # Elimina messaggi
+
+    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+    context.user_data.clear()
+    logging.info("Operazione annullata.")
+    logging.info("-"*50)
+    return ConversationHandler.END
+
+
+# /aggiungi - Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>
+# C'è il bug degli spazi: non si possono mettere città, nomi o stati con uno spazio.
+async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Aggiungi cagatore"""
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND", f"args: {context.args}")
+        # Solo admin
+        if(await HelpersCazzi.check_admin(update, cursor)):
+            # Controlla il numero di argomenti e che gli argomenti siano validi
+            if (len(context.args)==5 and HelpersCazzi.is_integer(context.args[0]) and HelpersCazzi.is_integer(context.args[2]) and not context.args[1].startswith("=") and not context.args[3].startswith("=") and not context.args[4].startswith("=")):
+
+                try:
+                    # Inserisce i dati nel database
+                    user_id=(int)(context.args[0])
+                    nome=context.args[1]
+                    fuso=(int)(context.args[2])
+                    citta=context.args[3]
+                    stato=context.args[4]
+                    cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato)) # Inserisce come non_admin.
+                    await update.message.reply_text(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
+                    logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
+                    conn.commit()
+                except sqlite3.Error as e:
+                    # Errore
+                    await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id.")
+                    logging.warning(f"Errore nell'inserimento nel database: {e}")
+
+            else:
+                # Spiega la sintassi
+                await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>")
+                logging.info("Spiegata la sintassi di /aggiungi")
+        logging.info("-"*50)
+
+
+# /rimuovi - Sintassi: /rimuovi <nome>
+# C'è il bug degli spazi: non si può inserire un nome con degli spazi
+async def rimuovi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Rimuovi cagatore"""
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "RIMUOVI_COMMAND", f"args: {context.args}")
+        # Solo admin
+        if(await HelpersCazzi.check_admin(update, cursor)):
+            # Controlla il numero di argomenti
+            if (len(context.args)==1):
+                # Tutto implementato con un bel database sql
+                try:
+                    nome=context.args[0]
+                    # Controlla che il cagatore esista
+                    if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+                        # Rimuove dal database
+                        cursor.execute("delete from cagatori where nome=?", (nome,))
+                        await update.message.reply_text(f"Rimosso il cagatore {nome}.")
+                        logging.info(f"Rimosso cagatore {nome}.")
+                        conn.commit()
+                    else:
+                        # Errore
+                        await update.message.reply_text(f"Il cagatore {nome} non esiste.")
+                        logging.warning(f"Il cagatore {nome} non esiste.")
+                except sqlite3.Error as e:
+                    await update.message.reply_text(f"Errore nella rimozione.")
+                    logging.error(f"Errore nella rimozione: {e}")
+            else:
+                await update.message.reply_text("Sintassi: /rimuovi <nome>")
+                logging.info("Spiegata la sintassi di /rimuovi")
+        logging.info("-"*50)
+
+
 # /addadmin - Sintassi: /addadmin <nome>
 async def addadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Nomina admin"""
@@ -842,31 +867,6 @@ async def rmadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info("-"*50)
 
 
-# /mieidati
-async def mieidati_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Visualizza i miei dati"""
-    if(update.message):
-        LoggingCazzi.log_user_activity(update, "MIEIDATI_COMMAND")
-        if(await HelpersCazzi.check_cagatore_o_admin(update, cursor)):
-            try:
-                # Prende i dati del cagatore
-                user_id = update.message.from_user.id
-                cursor.execute("select nome, admin, fuso, citta, stato from cagatori where user_id=?", (user_id,))
-                dati=cursor.fetchone()
-                if(dati[1]): # Se è admin
-                    messaggio = f"Nome: <b>{dati[0]}</b>\n"
-                else:
-                    messaggio = f"Nome: {dati[0]}\n"
-                messaggio += f"Fuso: {dati[2]}\nCittà: {dati[3]}\nStato: {dati[4]}\n"
-                await update.message.reply_text(messaggio, parse_mode='HTML') # Per scrivere in grassetto gli admin
-                logging.info(f"Mandati dati di {dati[0]}")
-            except sqlite3.Error as e:
-                # Errore
-                await update.message.reply_text(f"Errore nel recuperare i dati.")
-                logging.error(f"Errore. {e}")
-        logging.info("-"*50)
-
-
 def inserisci_cacche():
     """Inserisce le cacche nello spreadsheet e gestisce la coda"""
     # Fa la connessione al database per evitare casini.
@@ -909,18 +909,18 @@ def main():
 
 # help - Visualizza un messaggio di aiuto
 # comandi - Manda una lista dei comandi
-# sintassi - Visualizza sintassi dei messaggi di cacca
-# aggiungi - Aggiungi cagatore (admin only)
 # join - Diventa un cagatore
-# rimuovi - Rimuovi cagatore (admin only)
-# abbandona - Smetti di essere un cagatore
+# sintassi - Visualizza sintassi dei messaggi di cacca
+# mieidati - Visualizza i propri dati
 # setdato - Aggiorna un proprio dato
 # rmcacca - Visualizza e rimuovi le ultime cacche inserite
 # cagatori - Lista tutti i cagatori
+# abbandona - Smetti di essere un cagatore
+# annulla - Annulla il comando corrente
+# aggiungi - Aggiungi cagatore (admin only)
+# rimuovi - Rimuovi cagatore (admin only)
 # addadmin - Nomina admin (admin only)
 # rmadmin - Rimuovi admin (admin only)
-# mieidati - Visualizza i propri dati
-# annulla - Annulla il comando corrente
 
 
         # Handler per i comandi
@@ -933,8 +933,6 @@ def main():
         ))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("comandi", comandi_command))
-        application.add_handler(CommandHandler("sintassi", sintassi_command))
-        application.add_handler(CommandHandler("aggiungi", aggiungi_command))
         application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("join", join_command)],
             states={
@@ -945,21 +943,8 @@ def main():
             },
             fallbacks=[CommandHandler("annulla", join_annulla)],
         ))
-        application.add_handler(CommandHandler("rimuovi", rimuovi_command))
-        application.add_handler(ConversationHandler(
-            entry_points=[CommandHandler("abbandona", abbandona_command)],
-            states={
-                1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si)]
-            },
-            fallbacks=[MessageHandler(filters.TEXT, abbandona_annulla)],
-        ))
-        application.add_handler(ConversationHandler(
-            entry_points=[CommandHandler("rmcacca", rmcacca_command)],
-            states={
-                1: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi)]
-            },
-            fallbacks=[MessageHandler(filters.TEXT, rmcacca_annulla)],
-        ))
+        application.add_handler(CommandHandler("sintassi", sintassi_command))
+        application.add_handler(CommandHandler("mieidati", mieidati_command))
         application.add_handler(ConversationHandler(
             entry_points=[CommandHandler("setdato", setdato_command)],
             states={
@@ -968,10 +953,25 @@ def main():
             },
             fallbacks=[CommandHandler("annulla", setdato_annulla)]
         ))
+        application.add_handler(ConversationHandler(
+            entry_points=[CommandHandler("rmcacca", rmcacca_command)],
+            states={
+                1: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi)]
+            },
+            fallbacks=[MessageHandler(filters.TEXT, rmcacca_annulla)],
+        ))
         application.add_handler(CommandHandler("cagatori", cagatori_command))
+        application.add_handler(ConversationHandler(
+            entry_points=[CommandHandler("abbandona", abbandona_command)],
+            states={
+                1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si)]
+            },
+            fallbacks=[MessageHandler(filters.TEXT, abbandona_annulla)],
+        ))
+        application.add_handler(CommandHandler("aggiungi", aggiungi_command))
+        application.add_handler(CommandHandler("rimuovi", rimuovi_command))
         application.add_handler(CommandHandler("addadmin", addadmin_command))
         application.add_handler(CommandHandler("rmadmin", rmadmin_command))
-        application.add_handler(CommandHandler("mieidati", mieidati_command))
 
         # Fa partire il bot
         logging.info("Bot partito...")
