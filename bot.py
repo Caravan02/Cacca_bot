@@ -46,7 +46,7 @@ try:
     logging.info("Connesso al database.")
 except sqlite3.Error as e:
     logging.error(f"Errore nella connessione al database: {e}")
-    raise
+    raise ConnectionError(f"Errore nella connessione al database: {e}")
 
 # Inizializza Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
@@ -83,9 +83,10 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
                     altitudine=re.split(r'[,;\n]+',value)[0]
                     if(not altitudine.isdigit()):
-                        await update.message.reply_text("Errore: altitudine non valida.")
-                        logging.error("Errore: altitudine non valida.")
-                        raise
+                        await update.message.reply_text("Errore: altitudine non valida. Riprova.")
+                        logging.warning("Errore: altitudine non valida.")
+                        logging.info("-"*50)
+                        return ConversationHandler.END
                 else:
                     altitudine=""
                 if(re.search("velocità: ", user_message, re.IGNORECASE)):
@@ -93,8 +94,9 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     velocita=re.split(r'[,;\n]+',value)[0]
                     if(not velocita.isdigit()):
                         await update.message.reply_text("Errore: velocità non valida.")
-                        logging.error("Errore: velocità non valida.")
-                        raise
+                        logging.warning("Errore: velocità non valida.")
+                        logging.info("-"*50)
+                        return ConversationHandler.END
                 else:
                     velocita=""
 
@@ -103,30 +105,31 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     flag = bool(True)
                     value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
                     citta=re.split(r'[,;\n]+',value)[0]
-                    # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-                    if(citta.startswith('=')):
-                        await update.message.reply_text("Bel tentativo...")
-                        logging.error("Errore: Città inizia con '='.")
-                        raise
+                    if(not citta.isalpha()):
+                        await update.message.reply_text("Errore: città non valida (sono accettate solo lettere).")
+                        logging.warning("Errore: città contiene caratteri che non sono lettere.")
+                        logging.info("-"*50)
+                        return ConversationHandler.END
                 if(re.search("fuso: ", user_message, re.IGNORECASE)):
                     flag = bool(True)
                     value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
                     fuso=re.split(r'[,;\n]+',value)[0]
                     if(not HelpersCazzi.is_integer(fuso)):
-                        await update.message.reply_text("Errore: fuso non valido.")
-                        logging.error(f"Errore: fuso non valido.")
-                        raise
+                        await update.message.reply_text("Errore: fuso non valido (deve essere un intero).")
+                        logging.warning("Errore: fuso non valido.")
+                        logging.info("-"*50)
+                        return ConversationHandler.END
                     else:
                         fuso=int(fuso)
                 if(re.search("stato: ", user_message, re.IGNORECASE)):
                     flag = bool(True)
                     value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
                     stato=re.split(r'[,;\n]+',value)[0]
-                    # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-                    if(stato.startswith('=')):
-                        await update.message.reply_text("Bel tentativo...")
-                        logging.error("Errore: Stato inizia con '='.")
-                        raise
+                    if(not stato.isalpha()):
+                        await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere).")
+                        logging.warning("Errore: stato contiene caratteri che non sono lettere.")
+                        logging.info("-"*50)
+                        return ConversationHandler.END
 
                 # giorno e ora
 
@@ -136,16 +139,18 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
                     if(not ora):
                         await update.message.reply_text("Errore: ora non valida.")
-                        logging.error("Errore: ora non valida.")
-                        raise
+                        logging.warning("Errore: ora non valida.")
+                        logging.info("-"*50)
+                        return ConversationHandler.END
 
                     if(re.search("giorno: ", user_message, re.IGNORECASE)):
                         value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
                         giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
                         if(not giorno):
                             await update.message.reply_text("Errore: giorno non valido.")
-                            logging.error("Errore: giorno non valido.")
-                            raise
+                            logging.warning("Errore: giorno non valido.")
+                            logging.info("-"*50)
+                            return ConversationHandler.END
                     else:
                         # Per assicurarsi che il giorno sia localizzato.
                         data=update.message.date + timedelta(hours=fuso)
@@ -157,12 +162,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     ora=data.time().strftime('%H.%M')
 
                 if(flag):
-                    try:
-                        cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
-                    except sqlite3.Error as e:
-                        await update.message.reply_text("Errore: dati non validi.")
-                        logging.error(f"Dati inseriti non validi: {e}")
-                        raise
+                    cursor.execute("update cagatori set citta=?, stato=?, fuso=? where user_id=?", (citta, stato, fuso, user_id))
 
                 # Tastiera con le opzioni
                 keyboard=[["Sì", "No"]]
@@ -312,7 +312,7 @@ async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_NOME", f"Messaggio: {update.message.text[:50]}")
         context.user_data["eliminare"].append(update.message.message_id)
-        if(not update.message.text.startswith('=')): # Controlla il nome
+        if(not update.message.text.isalpha()): # Controlla il nome
             context.user_data["nome"]=update.message.text # Registra il nome
             mess=await update.message.reply_text( # Chiede il fuso
                 "Inserisci il tuo fuso orario UTC (esempio: +1)."
@@ -320,8 +320,8 @@ async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["eliminare"].append(mess.message_id)
             return 2
         else:
-            logging.warning("Valore inizia con =")
-            mess=await update.message.reply_text("Bel tentativo... Riprova.")
+            logging.warning("Nome non valido")
+            mess=await update.message.reply_text("Errore: nome non valido (sono accettate solo lettere). Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
             return 1 # Se non è valido, richiede il nome
 
@@ -339,7 +339,7 @@ async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["eliminare"].append(mess.message_id)
             return 3
         else:
-            logging.warning("Il fuso inserito non è valido.")
+            logging.warning("Fuso non valido.")
             mess=await update.message.reply_text("Errore: fuso non valido. Reinserire il fuso.")
             context.user_data["eliminare"].append(mess.message_id)
             return 2 # Se non è valido, richiede il fuso
@@ -349,7 +349,7 @@ async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         context.user_data["eliminare"].append(update.message.message_id)
         LoggingCazzi.log_user_activity(update, "JOIN_CITTA", f"Messaggio: {update.message.text[:50]}")
-        if(not update.message.text.startswith('=')): # Controlla la città
+        if(not update.message.text.isalpha()): # Controlla la città
             context.user_data["citta"]=update.message.text # Registra la città
             mess=await update.message.reply_text( # Chiede lo stato
                 "Inserisci il tuo stato."
@@ -357,8 +357,8 @@ async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["eliminare"].append(mess.message_id)
             return 4
         else:
-            logging.warning("Valore inizia con =")
-            mess=await update.message.reply_text("Bel tentativo... Riprova.")
+            logging.warning("Città non valida.")
+            mess=await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
             return 3 # Se non è valido, richiede la città
 
@@ -368,7 +368,7 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "JOIN_STATO", f"Messaggio: {update.message.text[:50]}")
         context.user_data["eliminare"].append(update.message.message_id)
         stato=update.message.text
-        if(not stato.startswith('=')): # Controlla lo stato
+        if(stato.isalpha()): # Controlla lo stato
             # Prende i dati
             user_id=update.message.from_user.id
             nome=context.user_data["nome"]
@@ -393,8 +393,8 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return ConversationHandler.END
         else:
             # Se non è valido, richiede lo stato
-            logging.warning("Bel tentativo...")
-            mess=await update.message.reply_text("Bel tentativo... Riprova.")
+            logging.warning("Stato non valido.")
+            mess=await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
             return 4
 
@@ -531,7 +531,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return 2
 
         elif dato == 'Città':
-            if(not roba.startswith('=')): # Controlla validità
+            if(roba.isalpha()): # Controlla validità
                 # Aggiorna dato
                 cursor.execute("update cagatori set citta=? where user_id=?", (roba, user_id))
                 await update.message.reply_text(f"Città aggiornata a {roba}.")
@@ -539,13 +539,13 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 conn.commit()
             else:
                 # Errore
-                logging.warning("Valore inizia con =")
-                mess=await update.message.reply_text("Bel tentativo... Riprova.")
+                logging.warning("Città non valida.")
+                mess=await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
                 context.user_data["eliminare"].append(mess.message_id)
                 return 2
 
         else: # dato == 'Stato'
-            if(not roba.startswith('=')): # Controlla validità
+            if(roba.isalpha()): # Controlla validità
                 # Aggiorna dato
                 cursor.execute("update cagatori set stato=? where user_id=?", (roba, user_id))
                 await update.message.reply_text(f"Stato aggiornato a {roba}.")
@@ -553,8 +553,8 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 conn.commit()
             else:
                 # Errore
-                logging.warning("Valore inizia con =")
-                mess=await update.message.reply_text("Bel tentativo... Riprova.")
+                logging.warning("Stato non valido.")
+                mess=await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
                 context.user_data["eliminare"].append(mess.message_id)
                 return 2
         await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
@@ -749,7 +749,7 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Solo admin
         if(await HelpersCazzi.check_admin(update, cursor)):
             # Controlla il numero di argomenti e che gli argomenti siano validi
-            if (len(context.args)==5 and HelpersCazzi.is_integer(context.args[0]) and HelpersCazzi.is_integer(context.args[2]) and not context.args[1].startswith("=") and not context.args[3].startswith("=") and not context.args[4].startswith("=")):
+            if (len(context.args)==5 and HelpersCazzi.is_integer(context.args[0]) and HelpersCazzi.is_integer(context.args[2]) and context.args[1].isalpha() and context.args[3].isalpha() and context.args[4].isalpha()):
 
                 try:
                     # Inserisce i dati nel database
@@ -951,7 +951,7 @@ def main():
         application.run_polling()
     except Exception as e:
         logging.critical(f"Errore: bot non partito: {e}", exc_info=True)
-        raise
+        raise RuntimeError(f"Errore: bot non partito: {e}")
 
 if __name__ == '__main__':
 

@@ -29,7 +29,7 @@ class GoogleSheetsHandler:
             self.logger.info("Client di Google sheets inizializzato")
         except Exception as e:
             self.logger.error(f"Errore nell'inizializzazione del client di Google Sheets: {e}", exc_info=True)
-            raise
+            raise RuntimeError(f"Errore nell'inizializzazione del client di Google Sheets: {e}")
 
     def connect(self):
         """Crea la connessione allo spreadsheet"""
@@ -39,7 +39,7 @@ class GoogleSheetsHandler:
             self.logger.info("Connessione allo spreadsheet riuscita.")
         except Exception as e:
             self.logger.error(f"Connessione allo spreadsheet non riuscita: {e}", exc_info=True)
-            raise
+            raise ConnectionError(f"Connessione allo spreadsheet non riuscita: {e}")
 
     def append_data(self, data):
         """Aggiungi dati al Google Sheets"""
@@ -61,8 +61,8 @@ class GoogleSheetsHandler:
             lconn = sqlite3.connect('cagatori.db')
             lcursor = lconn.cursor()
         except sqlite3.Error as e:
-            logging.error(f"Errore nella connessione al database: {e}")
-            raise
+            self.logger.error(f"Errore nella connessione al database: {e}")
+            raise ConnectionError(f"Errore nella connessione al database: {e}")
 
         # Inserisce cacche nello spreadsheet
         # Inserisce quelle più vecchie di un giorno
@@ -73,9 +73,9 @@ class GoogleSheetsHandler:
         if(cacche):
             GoogleSheetsHandler.connect(self)
             if not GoogleSheetsHandler.append_data(self, cacche):
-                logging.error("Errore: cacche non aggiunte.")
+                self.logger.error("Errore: cacche non aggiunte.")
             else:
                 lcursor.execute("delete from cacche where timestamp <= ?", (ieri_iso,))
                 lconn.commit()
         else:
-            logging.info("Non ci sono nuove cacche da aggiungere allo spreadsheet.")
+            self.logger.info("Non ci sono nuove cacche da aggiungere allo spreadsheet.")
