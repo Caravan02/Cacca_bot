@@ -312,7 +312,7 @@ async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_NOME", f"Messaggio: {update.message.text[:50]}")
         context.user_data["eliminare"].append(update.message.message_id)
-        if(not update.message.text.isalpha()): # Controlla il nome
+        if(update.message.text.isalpha()): # Controlla il nome
             context.user_data["nome"]=update.message.text # Registra il nome
             mess=await update.message.reply_text( # Chiede il fuso
                 "Inserisci il tuo fuso orario UTC (esempio: +1)."
@@ -349,7 +349,7 @@ async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         context.user_data["eliminare"].append(update.message.message_id)
         LoggingCazzi.log_user_activity(update, "JOIN_CITTA", f"Messaggio: {update.message.text[:50]}")
-        if(not update.message.text.isalpha()): # Controlla la città
+        if(update.message.text.isalpha()): # Controlla la città
             context.user_data["citta"]=update.message.text # Registra la città
             mess=await update.message.reply_text( # Chiede lo stato
                 "Inserisci il tuo stato."
