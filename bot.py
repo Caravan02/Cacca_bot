@@ -51,6 +51,10 @@ except sqlite3.Error as e:
 # Inizializza Google Sheets handler
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
 
+# Nomi sensati per i valori ritornati nelle conversazioni
+CACCA_CONFERMA, JOIN_NOME, JOIN_FUSO, JOIN_CITTA, JOIN_STATO, SETDATO_DATO, SETDATO_CAMBIA, RMCACCA_RIMUOVI, ABBANDONA_SI, SUDO_MENU, SUDO_ADDCACCA_MESSAGGIO, SUDO_ADDCACCA_CONFERMA, SUDO_ADDCACCA_SI, SUDO_RMCACCA_SCEGLI, SUDO_RMCACCA_RIMUOVI = range(15)
+
+
 # Comandi Bot
 
 # Gestisce le cacche
@@ -179,7 +183,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data["fuso"]=fuso
                 context.user_data["messaggio"]=update.message.message_id
                 context.user_data["eliminare"]=ans.message_id
-                return 11
+                return CACCA_CONFERMA
         logging.info("-"*50)
     return ConversationHandler.END
 
@@ -297,7 +301,7 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Memorizza gli id dei messaggi per poterli cancellare poi
             context.user_data["messaggio"]=update.message.message_id
             context.user_data["eliminare"]=[mess.message_id,]
-            return 21
+            return JOIN_NOME
         else:
             # Termina la conversazione se non è nel gruppo o non è admin
             logging.info("-"*50)
@@ -314,12 +318,12 @@ async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Inserisci il tuo fuso orario UTC (esempio: +1)."
             )
             context.user_data["eliminare"].append(mess.message_id)
-            return 22
+            return JOIN_FUSO
         else:
             logging.warning("Valore inizia con =")
             mess=await update.message.reply_text("Bel tentativo... Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 21 # Se non è valido, richiede il nome
+            return JOIN_NOME # Se non è valido, richiede il nome
 
 # Registra il fuso e chiede la città
 async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -333,12 +337,12 @@ async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Inserisci la tua città attuale."
             )
             context.user_data["eliminare"].append(mess.message_id)
-            return 23
+            return JOIN_CITTA
         else:
             logging.warning("Il fuso inserito non è valido.")
             mess=await update.message.reply_text("Errore: fuso non valido. Reinserire il fuso.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 22 # Se non è valido, richiede il fuso
+            return JOIN_FUSO # Se non è valido, richiede il fuso
 
 # Regista la città e chiede lo stato
 async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -351,12 +355,12 @@ async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Inserisci il tuo stato."
             )
             context.user_data["eliminare"].append(mess.message_id)
-            return 24
+            return JOIN_STATO
         else:
             logging.warning("Valore inizia con =")
             mess=await update.message.reply_text("Bel tentativo... Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 23 # Se non è valido, richiede la città
+            return JOIN_CITTA # Se non è valido, richiede la città
 
 # Chiede lo stato, dopodiché se è valido prende tutti i dati e crea il nuovo cagatore
 async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -392,7 +396,7 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.warning("Bel tentativo...")
             mess=await update.message.reply_text("Bel tentativo... Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 24
+            return JOIN_STATO
 
 # /annulla - annulla l'operazione di join
 async def join_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -484,7 +488,7 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ),
             )
             context.user_data["eliminare"]=[mess.message_id]
-            return 31
+            return SETDATO_DATO
         else:
             logging.info("-"*50)
             return ConversationHandler.END
@@ -499,7 +503,7 @@ async def setdato_dato(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Scrivi il nuovo valore.", reply_markup=ReplyKeyboardRemove()
         )
         context.user_data["eliminare"].append(mess.message_id)
-        return 32
+        return SETDATO_CAMBIA
 
 # Salva il nuovo valore, e lo cambia se è valido
 async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -524,7 +528,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.warning("Errore: fuso non valido. Riprova.")
                 mess=await update.message.reply_text("Errore: fuso non valido. Riprova")
                 context.user_data["eliminare"].append(mess.message_id)
-                return 32
+                return SETDATO_CAMBIA
 
         elif dato == 'Città':
             if(not roba.startswith('=')): # Controlla validità
@@ -538,7 +542,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.warning("Valore inizia con =")
                 mess=await update.message.reply_text("Bel tentativo... Riprova.")
                 context.user_data["eliminare"].append(mess.message_id)
-                return 32
+                return SETDATO_CAMBIA
 
         else: # dato == 'Stato'
             if(not roba.startswith('=')): # Controlla validità
@@ -552,7 +556,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.warning("Valore inizia con =")
                 mess=await update.message.reply_text("Bel tentativo... Riprova.")
                 context.user_data["eliminare"].append(mess.message_id)
-                return 32
+                return SETDATO_CAMBIA
         await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
         context.user_data.clear() # Pulisce i dati raccolti
         logging.info("-"*50)
@@ -593,7 +597,7 @@ async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.info("Mandato messaggio con le cacche recenti.")
                 context.user_data["cacche"]=ultime_cacche
                 context.user_data["eliminare"]=[update.message.message_id, mess.message_id]
-                return 41
+                return RMCACCA_RIMUOVI
             else:
                 await update.message.reply_text("Non hai inserito cacche di recente.")
                 logging.info("Non ci sono cacche dell'utente nella tabella cacche.")
@@ -627,7 +631,7 @@ async def rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.warning("Numero inserito non valido.")
             mess=await update.message.reply_text("Il numero inserito non è valido, riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 41
+            return RMCACCA_RIMUOVI
 
 # /annulla
 async def rmcacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -690,7 +694,7 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             context.user_data["eliminare"]=[mess.message_id]
             logging.info("-"*50)
-            return 51
+            return ABBANDONA_SI
         else:
             logging.info("-"*50)
             return ConversationHandler.END
@@ -756,7 +760,7 @@ async def sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             context.user_data["eliminare"].append(mess.message_id)
             logging.info("-"*50)
-            return 61
+            return SUDO_MENU
         else:
             logging.warning(f"L'utente {update.effective_user.id} non è un admin")
             logging.info("-"*50)
@@ -772,7 +776,7 @@ async def sudo_addcacca(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         context.user_data["eliminare"].append(mess.message_id)
         logging.info("-"*50)
-        return 62
+        return SUDO_ADDCACCA_MESSAGGIO
 
 # Scrivi il messaggio che il cagatore avrebbe docuto scrivere.
 async def sudo_addcacca_messaggio(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -790,7 +794,7 @@ async def sudo_addcacca_messaggio(update: Update, context: ContextTypes.DEFAULT_
             )
             context.user_data["eliminare"].append(mess.id)
             logging.info("-"*50)
-            return 63
+            return SUDO_ADDCACCA_CONFERMA
         else:
             # Errore
             mess=await update.message.reply_text(
@@ -799,7 +803,7 @@ async def sudo_addcacca_messaggio(update: Update, context: ContextTypes.DEFAULT_
             context.user_data["eliminare"].append(mess.message_id)
             logging.warning("Non c'è un cagatore con questo nome.")
             logging.info("-"*50)
-            return 62
+            return SUDO_ADDCACCA_MESSAGGIO
 
 # Ho copia-incollato tutto dall'handling dei messaggi di cacca e modificato qualcosina.
 async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -918,7 +922,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
         context.user_data["aggiornare"]=flag
         context.user_data["fuso"]=fuso
         context.user_data["eliminare"].append(ans.message_id)
-        return 64
+        return SUDO_ADDCACCA_SI
 
 # Inserisce la cacca se tutto è ok.
 async def sudo_addcacca_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -963,7 +967,7 @@ async def sudo_rmcacca(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         context.user_data["eliminare"].append(mess.message_id)
         logging.info("-"*50)
-        return 65
+        return SUDO_RMCACCA_SCEGLI
 
 # Scegli la cacca, se il cagatore con quel nome esiste
 async def sudo_rmcacca_scegli(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -984,7 +988,7 @@ async def sudo_rmcacca_scegli(update: Update, context: ContextTypes.DEFAULT_TYPE
                 logging.info(f"Mandato messaggio con le cacche recenti di {nome}.")
                 context.user_data["cacche"]=ultime_cacche
                 context.user_data["eliminare"].append(mess.message_id)
-                return 66
+                return SUDO_RMCACCA_RIMUOVI
             else:
                 await update.message.reply_text(f"{nome} non ha inserito cacche di recente.")
                 logging.info("Non ci sono cacche dell'utente nella tabella cacche.")
@@ -998,7 +1002,7 @@ async def sudo_rmcacca_scegli(update: Update, context: ContextTypes.DEFAULT_TYPE
             context.user_data["eliminare"].append(mess.message_id)
             logging.warning("Non c'è un cagatore con questo nome.")
             logging.info("-"*50)
-            return 65
+            return SUDO_RMCACCA_SCEGLI
 
 async def sudo_rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
@@ -1022,7 +1026,7 @@ async def sudo_rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYP
             logging.warning("Numero inserito non valido.")
             mess=await update.message.reply_text("Il numero inserito non è valido, riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 66
+            return SUDO_RMCACCA_RIMUOVI
 
 
 async def sudo_adduser(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1056,7 +1060,8 @@ async def sudo_rmadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data.clear()
         logging.info("-"*50)
         return ConversationHandler.END
-# Annulla
+
+# /annulla
 async def sudo_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     LoggingCazzi.log_user_activity(update, "SUDO_ANNULLA", f"Messaggio: {update.message.text[:50]}")
     mess=await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
@@ -1247,21 +1252,21 @@ def main():
                           CommandHandler("abbandona", abbandona_command),
                           CommandHandler("sudo", sudo_command)],
             states={
-                11: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), cacca_conferma), MessageHandler(filters.TEXT, cacca_annulla)],
+                CACCA_CONFERMA: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), cacca_conferma), MessageHandler(filters.TEXT, cacca_annulla)],
 
-                21: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_nome), MessageHandler(filters.COMMAND, join_annulla)],
-                22: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_fuso), MessageHandler(filters.COMMAND, join_annulla)],
-                23: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_citta), MessageHandler(filters.COMMAND, join_annulla)],
-                24: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_stato), MessageHandler(filters.COMMAND, join_annulla)],
+                JOIN_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_nome), MessageHandler(filters.COMMAND, join_annulla)],
+                JOIN_FUSO: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_fuso), MessageHandler(filters.COMMAND, join_annulla)],
+                JOIN_CITTA: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_citta), MessageHandler(filters.COMMAND, join_annulla)],
+                JOIN_STATO: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_stato), MessageHandler(filters.COMMAND, join_annulla)],
 
-                31: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT, setdato_annulla)],
-                32: [MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_cambia), MessageHandler(filters.COMMAND, setdato_annulla)],
+                SETDATO_DATO: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT, setdato_annulla)],
+                SETDATO_CAMBIA: [MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_cambia), MessageHandler(filters.COMMAND, setdato_annulla)],
 
-                41: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi), MessageHandler(filters.TEXT, rmcacca_annulla)],
+                RMCACCA_RIMUOVI: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi), MessageHandler(filters.TEXT, rmcacca_annulla)],
 
-                51: [MessageHandler(filters.Regex("^Sì$"), abbandona_si), MessageHandler(filters.TEXT, abbandona_annulla)],
+                ABBANDONA_SI: [MessageHandler(filters.Regex("^Sì$"), abbandona_si), MessageHandler(filters.TEXT, abbandona_annulla)],
 
-                61: [MessageHandler(filters.Regex("^Aggiungere una cacca$"), sudo_addcacca,),
+                SUDO_MENU: [MessageHandler(filters.Regex("^Aggiungere una cacca$"), sudo_addcacca),
                     MessageHandler(filters.Regex("^Rimuovere una cacca$"), sudo_rmcacca),
                     MessageHandler(filters.Regex("^Aggiungere un nuovo cagatore$"), sudo_adduser),
                     MessageHandler(filters.Regex("^Rimuovere un cagatore$"), sudo_rmuser),
@@ -1269,12 +1274,12 @@ def main():
                     MessageHandler(filters.Regex("^Declassare admin$"), sudo_rmadmin),
                     MessageHandler(filters.TEXT, sudo_annulla)],
 
-                62: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_messaggio), MessageHandler(filters.COMMAND, sudo_annulla)],
-                63: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_conferma), MessageHandler(filters.COMMAND, sudo_annulla)],
-                64: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), sudo_addcacca_si), MessageHandler(filters.TEXT, sudo_annulla)],
+                SUDO_ADDCACCA_MESSAGGIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_messaggio), MessageHandler(filters.COMMAND, sudo_annulla)],
+                SUDO_ADDCACCA_CONFERMA: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_conferma), MessageHandler(filters.COMMAND, sudo_annulla)],
+                SUDO_ADDCACCA_SI: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), sudo_addcacca_si), MessageHandler(filters.TEXT, sudo_annulla)],
 
-                65: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_rmcacca_scegli), MessageHandler(filters.TEXT, sudo_annulla)],
-                66: [MessageHandler(filters.Regex("^[0-9]*$"), sudo_rmcacca_rimuovi), MessageHandler(filters.TEXT, sudo_annulla)],
+                SUDO_RMCACCA_SCEGLI: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_rmcacca_scegli), MessageHandler(filters.TEXT, sudo_annulla)],
+                SUDO_RMCACCA_RIMUOVI: [MessageHandler(filters.Regex("^[0-9]*$"), sudo_rmcacca_rimuovi), MessageHandler(filters.TEXT, sudo_annulla)],
 
             },
             fallbacks=[MessageHandler(filters.TEXT, annulla)],
@@ -1286,72 +1291,6 @@ def main():
         application.add_handler(CommandHandler("sintassi", sintassi_command))
         application.add_handler(CommandHandler("mieidati", mieidati_command))
         application.add_handler(CommandHandler("cagatori", cagatori_command))
-
-        # application.add_handler(ConversationHandler(
-        #     entry_points=[MessageHandler(filters.Regex("^💩"), cacca_handle)],
-        #     states={
-        #         1: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), cacca_conferma)],
-        #     },
-        #     fallbacks=[MessageHandler(filters.TEXT, cacca_annulla)]
-        # ))
-
-        # application.add_handler(ConversationHandler(
-        #     entry_points=[CommandHandler("join", join_command)],
-        #     states={
-        #         1: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_nome)],
-        #         2: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_fuso)],
-        #         3: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_citta)],
-        #         4: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_stato)]
-        #     },
-        #     fallbacks=[CommandHandler("annulla", join_annulla)],
-        # ))
-        
-        # application.add_handler(ConversationHandler(
-        #     entry_points=[CommandHandler("setdato", setdato_command)],
-        #     states={
-        #         1: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT, setdato_annulla)],
-        #         2: [MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_cambia)]
-        #     },
-        #     fallbacks=[CommandHandler("annulla", setdato_annulla)]
-        # ))
-        # application.add_handler(ConversationHandler(
-        #     entry_points=[CommandHandler("rmcacca", rmcacca_command)],
-        #     states={
-        #         1: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi)]
-        #     },
-        #     fallbacks=[MessageHandler(filters.TEXT, rmcacca_annulla)],
-        # ))
-        
-        # application.add_handler(ConversationHandler(
-        #     entry_points=[CommandHandler("abbandona", abbandona_command)],
-        #     states={
-        #         1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si)]
-        #     },
-        #     fallbacks=[MessageHandler(filters.TEXT, abbandona_annulla)],
-        # ))
-        #application.add_handler(CommandHandler("aggiungi", aggiungi_command))
-        #application.add_handler(CommandHandler("rimuovi", rimuovi_command))
-        #application.add_handler(CommandHandler("addadmin", addadmin_command))
-        #application.add_handler(CommandHandler("rmadmin", rmadmin_command))
-
-        # application.add_handler(ConversationHandler(
-        #     entry_points=[CommandHandler("sudo", sudo_command)],
-        #     states={
-        #         1: [MessageHandler(filters.Regex("^Aggiungere una cacca$"), sudo_addcacca),
-        #             MessageHandler(filters.Regex("^Rimuovere una cacca$"), sudo_rmcacca),
-        #             MessageHandler(filters.Regex("^Aggiungere un nuovo cagatore$"), sudo_adduser),
-        #             MessageHandler(filters.Regex("^Rimuovere un cagatore$"), sudo_rmuser),
-        #             MessageHandler(filters.Regex("^Nominare admin$"), sudo_addadmin),
-        #             MessageHandler(filters.Regex("^Declassare admin$"), sudo_rmadmin)],
-
-        #         2: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_messaggio)],
-        #         3: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_conferma)],
-        #         4: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), sudo_addcacca_si)],
-
-
-        #     },
-        #     fallbacks=[MessageHandler(filters.TEXT, sudo_annulla)]
-        # ))
 
         # Fa partire il bot
         logging.info("Bot partito...")
