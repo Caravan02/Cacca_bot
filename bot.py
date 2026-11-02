@@ -278,10 +278,7 @@ Lista dei comandi:
 /cagatori - Lista tutti i cagatori
 /abbandona - Smetti di essere un cagatore
 /annulla - Annulla il comando corrente
-/aggiungi - Aggiungi cagatore (admin only)
-/rimuovi - Rimuovi cagatore (admin only)
-/addadmin - Nomina admin (admin only)
-/rmadmin - Rimuovi admin (admin only)
+/sudo - Comando di gestione (solo per admin)
         """)
             logging.info("Lista dei comandi mandata.")
         logging.info("-"*50)
@@ -595,8 +592,7 @@ async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 mess=await update.message.reply_text(messaggio)
                 logging.info("Mandato messaggio con le cacche recenti.")
                 context.user_data["cacche"]=ultime_cacche
-                context.user_data["messaggio"]=update.message.message_id
-                context.user_data["eliminare"]=[mess.message_id]
+                context.user_data["eliminare"]=[update.message.message_id, mess.message_id]
                 return 41
             else:
                 await update.message.reply_text("Non hai inserito cacche di recente.")
@@ -621,7 +617,6 @@ async def rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn.commit()
             mess=await update.message.reply_text("Cacca rimossa con successo.")
             context.user_data["eliminare"].append(mess.message_id)
-            context.user_data["eliminare"].append(context.user_data["messaggio"])
             context.user_data["eliminare"].append(messid) # Rinuove messaggio con la cacca
             await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
             context.user_data.clear() # Pulisce i dati raccolti
@@ -640,7 +635,6 @@ async def rmcacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mess=await update.message.reply_text("Operazione annullata.")
     context.user_data["eliminare"].append(update.message.message_id)
     context.user_data["eliminare"].append(mess.message_id)
-    context.user_data["eliminare"].append(context.user_data["messaggio"])
 
     # Elimina messaggi
 
@@ -741,38 +735,6 @@ async def abbandona_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-# /aggiungi - Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>
-# C'è il bug degli spazi: non si possono mettere città, nomi o stati con uno spazio.
-async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Aggiungi cagatore"""
-    if(update.message):
-        LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND", f"args: {context.args}")
-        # Solo admin
-        if(await HelpersCazzi.check_admin(update, cursor)):
-            # Controlla il numero di argomenti e che gli argomenti siano validi
-            if (len(context.args)==5 and HelpersCazzi.is_integer(context.args[0]) and HelpersCazzi.is_integer(context.args[2]) and not context.args[1].startswith("=") and not context.args[3].startswith("=") and not context.args[4].startswith("=")):
-
-                try:
-                    # Inserisce i dati nel database
-                    user_id=(int)(context.args[0])
-                    nome=context.args[1]
-                    fuso=(int)(context.args[2])
-                    citta=context.args[3]
-                    stato=context.args[4]
-                    cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato)) # Inserisce come non_admin.
-                    await update.message.reply_text(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
-                    logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
-                    conn.commit()
-                except sqlite3.Error as e:
-                    # Errore
-                    await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id.")
-                    logging.warning(f"Errore nell'inserimento nel database: {e}")
-
-            else:
-                # Spiega la sintassi
-                await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>")
-                logging.info("Spiegata la sintassi di /aggiungi")
-        logging.info("-"*50)
 
 # /sudo
 async def sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -991,14 +953,77 @@ async def sudo_addcacca_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info("-"*50)
         return ConversationHandler.END
 
-
+# Rimuovi la cacca di qualcun altro
 async def sudo_rmcacca(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SUDO_RMCACCA", f"Messaggio: {update.message.text[:50]}...")
-        await update.message.reply_text("Work in progress...", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
-        context.user_data.clear()
+        context.user_data["eliminare"].append(update.message.message_id)
+        mess=await update.message.reply_text(
+            "Inserire il nome del cagatore per cui vuoi togliere una cacca.", reply_markup=ReplyKeyboardRemove() # Fai sparire la tastiera
+        )
+        context.user_data["eliminare"].append(mess.message_id)
         logging.info("-"*50)
-        return ConversationHandler.END
+        return 65
+
+# Scegli la cacca, se il cagatore con quel nome esiste
+async def sudo_rmcacca_scegli(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_RMCACCA_SCEGLI", f"Messaggio: {update.message.text[:50]}...")
+        context.user_data["eliminare"].append(update.message.message_id)
+        nome=update.message.text
+        if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+            ultime_cacche=cursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita, messaggio from cacche where nome=?", (nome,)).fetchall()
+            if(ultime_cacche):
+                messaggio=f"Le cacche recenti di {nome} sono:\n\n"
+                i=1
+                for cacca in ultime_cacche:
+                    messaggio+=f"{i}: {cacca[0:7]} \n"
+                    i=i+1
+                messaggio+="\nInserire il numero della cacca da cancellare, /annulla per annullare.\n"
+                mess=await update.message.reply_text(messaggio)
+                logging.info(f"Mandato messaggio con le cacche recenti di {nome}.")
+                context.user_data["cacche"]=ultime_cacche
+                context.user_data["eliminare"].append(mess.message_id)
+                return 66
+            else:
+                await update.message.reply_text(f"{nome} non ha inserito cacche di recente.")
+                logging.info("Non ci sono cacche dell'utente nella tabella cacche.")
+                logging.info("-"*50)
+                return ConversationHandler.END
+        else:
+            # Errore
+            mess=await update.message.reply_text(
+                "Non c'è un cagatore con questo nome. Riprova."
+            )
+            context.user_data["eliminare"].append(mess.message_id)
+            logging.warning("Non c'è un cagatore con questo nome.")
+            logging.info("-"*50)
+            return 65
+
+async def sudo_rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_RMCACCA_RIMUOVI", f"Messaggio: {update.message.text[:50]}...")
+        context.user_data["eliminare"].append(update.message.message_id)
+        i=int(update.message.text)-1
+        cacche=context.user_data["cacche"]
+        if(i>=0 and i<len(cacche)):
+            messid=int(cacche[i][7])
+            cursor.execute("delete from cacche where messaggio=?", (messid,))
+            conn.commit()
+            mess=await update.message.reply_text("Cacca rimossa con successo.")
+            context.user_data["eliminare"].append(mess.message_id)
+            context.user_data["eliminare"].append(messid) # Rinuove messaggio con la cacca
+            await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+            context.user_data.clear() # Pulisce i dati raccolti
+            logging.info(f"Cacca rimossa con successo: {cacche[i]}")
+            logging.info("-"*50)
+            return ConversationHandler.END
+        else:
+            logging.warning("Numero inserito non valido.")
+            mess=await update.message.reply_text("Il numero inserito non è valido, riprova.")
+            context.user_data["eliminare"].append(mess.message_id)
+            return 66
+
 
 async def sudo_adduser(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
@@ -1060,7 +1085,38 @@ async def annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
+# /aggiungi - Sintassi /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>
+# C'è il bug degli spazi: non si possono mettere città, nomi o stati con uno spazio.
+async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Aggiungi cagatore"""
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "AGGIUNGI_COMMAND", f"args: {context.args}")
+        # Solo admin
+        if(await HelpersCazzi.check_admin(update, cursor)):
+            # Controlla il numero di argomenti e che gli argomenti siano validi
+            if (len(context.args)==5 and HelpersCazzi.is_integer(context.args[0]) and HelpersCazzi.is_integer(context.args[2]) and not context.args[1].startswith("=") and not context.args[3].startswith("=") and not context.args[4].startswith("=")):
 
+                try:
+                    # Inserisce i dati nel database
+                    user_id=(int)(context.args[0])
+                    nome=context.args[1]
+                    fuso=(int)(context.args[2])
+                    citta=context.args[3]
+                    stato=context.args[4]
+                    cursor.execute("insert into cagatori values (?, ?, ?, 0, ?, ?)", (user_id, nome, fuso, citta, stato)) # Inserisce come non_admin.
+                    await update.message.reply_text(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
+                    logging.info(f"Aggiunto il cagatore {nome} con user_id {user_id}, fuso orario {fuso}, città {citta}, stato {stato}.")
+                    conn.commit()
+                except sqlite3.Error as e:
+                    # Errore
+                    await update.message.reply_text("Errore nell'inserimento nel database. Probabilmente c'è già un cagatore con lo stesso nome o user_id.")
+                    logging.warning(f"Errore nell'inserimento nel database: {e}")
+
+            else:
+                # Spiega la sintassi
+                await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>")
+                logging.info("Spiegata la sintassi di /aggiungi")
+        logging.info("-"*50)
 
 # /rimuovi - Sintassi: /rimuovi <nome>
 # C'è il bug degli spazi: non si può inserire un nome con degli spazi
@@ -1178,10 +1234,7 @@ def main():
 # cagatori - Lista tutti i cagatori
 # abbandona - Smetti di essere un cagatore
 # annulla - Annulla il comando corrente
-# aggiungi - Aggiungi cagatore (admin only)
-# rimuovi - Rimuovi cagatore (admin only)
-# addadmin - Nomina admin (admin only)
-# rmadmin - Rimuovi admin (admin only)
+# sudo - Comando di gestione (solo per admin)
 
 
         # Handler per i comandi
@@ -1219,6 +1272,9 @@ def main():
                 62: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_messaggio), MessageHandler(filters.COMMAND, sudo_annulla)],
                 63: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_conferma), MessageHandler(filters.COMMAND, sudo_annulla)],
                 64: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), sudo_addcacca_si), MessageHandler(filters.TEXT, sudo_annulla)],
+
+                65: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_rmcacca_scegli), MessageHandler(filters.TEXT, sudo_annulla)],
+                66: [MessageHandler(filters.Regex("^[0-9]*$"), sudo_rmcacca_rimuovi), MessageHandler(filters.TEXT, sudo_annulla)],
 
             },
             fallbacks=[MessageHandler(filters.TEXT, annulla)],
