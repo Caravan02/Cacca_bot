@@ -97,7 +97,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
                     velocita=re.split(r'[,;\n]+',value)[0]
                     if(not velocita.isdigit()):
-                        await update.message.reply_text("Errore: velocità non valida.")
+                        await update.message.reply_text("Errore: velocità non valida. Riprova.")
                         logging.warning("Errore: velocità non valida.")
                         logging.info("-"*50)
                         return ConversationHandler.END
@@ -110,7 +110,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
                     citta=re.split(r'[,;\n]+',value)[0]
                     if(not citta.isalpha()):
-                        await update.message.reply_text("Errore: città non valida (sono accettate solo lettere).")
+                        await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
                         logging.warning("Errore: città contiene caratteri che non sono lettere.")
                         logging.info("-"*50)
                         return ConversationHandler.END
@@ -119,7 +119,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
                     fuso=re.split(r'[,;\n]+',value)[0]
                     if(not HelpersCazzi.is_integer(fuso)):
-                        await update.message.reply_text("Errore: fuso non valido (deve essere un intero).")
+                        await update.message.reply_text("Errore: fuso non valido (deve essere un intero). Riprova.")
                         logging.warning("Errore: fuso non valido.")
                         logging.info("-"*50)
                         return ConversationHandler.END
@@ -130,7 +130,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
                     stato=re.split(r'[,;\n]+',value)[0]
                     if(not stato.isalpha()):
-                        await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere).")
+                        await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
                         logging.warning("Errore: stato contiene caratteri che non sono lettere.")
                         logging.info("-"*50)
                         return ConversationHandler.END
@@ -142,7 +142,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     value = re.split("or[ae]: ", user_message, flags=re.IGNORECASE)[1]
                     ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
                     if(not ora):
-                        await update.message.reply_text("Errore: ora non valida.")
+                        await update.message.reply_text("Errore: ora non valida. Riprova.")
                         logging.warning("Errore: ora non valida.")
                         logging.info("-"*50)
                         return ConversationHandler.END
@@ -151,7 +151,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
                         giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
                         if(not giorno):
-                            await update.message.reply_text("Errore: giorno non valido.")
+                            await update.message.reply_text("Errore: giorno non valido. Riprova.")
                             logging.warning("Errore: giorno non valido.")
                             logging.info("-"*50)
                             return ConversationHandler.END
@@ -893,18 +893,18 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
             altitudine=re.split(r'[,;\n]+',value)[0]
             if(not altitudine.isdigit()):
-                await update.message.reply_text("Errore: altitudine non valida.")
-                logging.error("Errore: altitudine non valida.")
-                raise
+                await update.message.reply_text("Errore: altitudine non valida. Riprova.")
+                logging.warning("Errore: altitudine non valida.")
+                return SUDO_ADDCACCA_MESSAGGIO
         else:
             altitudine=""
         if(re.search("velocità: ", user_message, re.IGNORECASE)):
             value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
             velocita=re.split(r'[,;\n]+',value)[0]
             if(not velocita.isdigit()):
-                await update.message.reply_text("Errore: velocità non valida.")
-                logging.error("Errore: velocità non valida.")
-                raise
+                await update.message.reply_text("Errore: velocità non valida. Riprova.")
+                logging.warning("Errore: velocità non valida.")
+                return SUDO_ADDCACCA_MESSAGGIO
         else:
             velocita=""
 
@@ -913,30 +913,28 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             flag = bool(True)
             value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
             citta=re.split(r'[,;\n]+',value)[0]
-            # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-            if(citta.startswith('=')):
-                await update.message.reply_text("Bel tentativo...")
-                logging.error("Errore: Città inizia con '='.")
-                raise
+            if(not citta.isalpha()):
+                await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
+                logging.warning("Errore: città contiene caratteri che non sono lettere. Riprova.")
+                return SUDO_ADDCACCA_MESSAGGIO
         if(re.search("fuso: ", user_message, re.IGNORECASE)):
             flag = bool(True)
             value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
             fuso=re.split(r'[,;\n]+',value)[0]
             if(not HelpersCazzi.is_integer(fuso)):
-                await update.message.reply_text("Errore: fuso non valido.")
-                logging.error(f"Errore: fuso non valido.")
-                raise
+                await update.message.reply_text("Errore: fuso non valido (deve essere un intero). Riprova.")
+                logging.warning("Errore: fuso non valido.")
+                return SUDO_ADDCACCA_MESSAGGIO
             else:
                 fuso=int(fuso)
         if(re.search("stato: ", user_message, re.IGNORECASE)):
             flag = bool(True)
             value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
             stato=re.split(r'[,;\n]+',value)[0]
-            # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
-            if(stato.startswith('=')):
-                await update.message.reply_text("Bel tentativo...")
-                logging.error("Errore: Stato inizia con '='.")
-                raise
+            if(not stato.isalpha()):
+                await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
+                logging.warning("Errore: stato contiene caratteri che non sono lettere.")
+                return SUDO_ADDCACCA_MESSAGGIO
 
         # giorno e ora
 
@@ -945,17 +943,17 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             value = re.split("or[ae]: ", user_message, flags=re.IGNORECASE)[1]
             ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
             if(not ora):
-                await update.message.reply_text("Errore: ora non valida.")
-                logging.error("Errore: ora non valida.")
-                raise
+                await update.message.reply_text("Errore: ora non valida. Riprova.")
+                logging.warning("Errore: ora non valida.")
+                return SUDO_ADDCACCA_MESSAGGIO
 
             if(re.search("giorno: ", user_message, re.IGNORECASE)):
                 value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
                 giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
                 if(not giorno):
-                    await update.message.reply_text("Errore: giorno non valido.")
-                    logging.error("Errore: giorno non valido.")
-                    raise
+                    await update.message.reply_text("Errore: giorno non valido. Riprova.")
+                    logging.warning("Errore: giorno non valido.")
+                    return SUDO_ADDCACCA_MESSAGGIO
             else:
                 # Per assicurarsi che il giorno sia localizzato.
                 data=update.message.date + timedelta(hours=fuso)
@@ -967,12 +965,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             ora=data.time().strftime('%H.%M')
 
         if(flag):
-            try:
-                cursor.execute("update cagatori set citta=?, stato=?, fuso=? where nome=?", (citta, stato, fuso, chi))
-            except sqlite3.Error as e:
-                await update.message.reply_text("Errore: dati non validi.")
-                logging.error(f"Dati inseriti non validi: {e}")
-                raise
+            cursor.execute("update cagatori set citta=?, stato=?, fuso=? where nome=?", (citta, stato, fuso, chi))
 
         # Tastiera con le opzioni
         keyboard=[["Sì", "No"]]
