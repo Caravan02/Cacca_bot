@@ -179,7 +179,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data["fuso"]=fuso
                 context.user_data["messaggio"]=update.message.message_id
                 context.user_data["eliminare"]=ans.message_id
-                return 1
+                return 11
         logging.info("-"*50)
     return ConversationHandler.END
 
@@ -190,7 +190,6 @@ async def cacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ans = await context.bot.send_message(chat_id=update.message.chat_id, text="Inserisco la cacca...", reply_markup=ReplyKeyboardRemove())
 
         roba=context.user_data["roba"]
-        # cursor.execute("insert into cacche1 values (?, ?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6], context.user_data["messaggio"]))
         cursor.execute("insert into cacche (nome, giorno, ora, citta, stato, altitudine, velocita, messaggio) values (?, ?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6], context.user_data["messaggio"]))
         conn.commit()
         logging.info(f"Roba da inserire: {roba}")
@@ -301,7 +300,7 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Memorizza gli id dei messaggi per poterli cancellare poi
             context.user_data["messaggio"]=update.message.message_id
             context.user_data["eliminare"]=[mess.message_id,]
-            return 1
+            return 21
         else:
             # Termina la conversazione se non è nel gruppo o non è admin
             logging.info("-"*50)
@@ -318,12 +317,12 @@ async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Inserisci il tuo fuso orario UTC (esempio: +1)."
             )
             context.user_data["eliminare"].append(mess.message_id)
-            return 2
+            return 22
         else:
             logging.warning("Valore inizia con =")
             mess=await update.message.reply_text("Bel tentativo... Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 1 # Se non è valido, richiede il nome
+            return 21 # Se non è valido, richiede il nome
 
 # Registra il fuso e chiede la città
 async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -337,12 +336,12 @@ async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Inserisci la tua città attuale."
             )
             context.user_data["eliminare"].append(mess.message_id)
-            return 3
+            return 23
         else:
             logging.warning("Il fuso inserito non è valido.")
             mess=await update.message.reply_text("Errore: fuso non valido. Reinserire il fuso.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 2 # Se non è valido, richiede il fuso
+            return 22 # Se non è valido, richiede il fuso
 
 # Regista la città e chiede lo stato
 async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -355,12 +354,12 @@ async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Inserisci il tuo stato."
             )
             context.user_data["eliminare"].append(mess.message_id)
-            return 4
+            return 24
         else:
             logging.warning("Valore inizia con =")
             mess=await update.message.reply_text("Bel tentativo... Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 3 # Se non è valido, richiede la città
+            return 23 # Se non è valido, richiede la città
 
 # Chiede lo stato, dopodiché se è valido prende tutti i dati e crea il nuovo cagatore
 async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -396,7 +395,7 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.warning("Bel tentativo...")
             mess=await update.message.reply_text("Bel tentativo... Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 4
+            return 24
 
 # /annulla - annulla l'operazione di join
 async def join_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -488,7 +487,7 @@ async def setdato_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ),
             )
             context.user_data["eliminare"]=[mess.message_id]
-            return 1
+            return 31
         else:
             logging.info("-"*50)
             return ConversationHandler.END
@@ -503,7 +502,7 @@ async def setdato_dato(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Scrivi il nuovo valore.", reply_markup=ReplyKeyboardRemove()
         )
         context.user_data["eliminare"].append(mess.message_id)
-        return 2
+        return 32
 
 # Salva il nuovo valore, e lo cambia se è valido
 async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -528,7 +527,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.warning("Errore: fuso non valido. Riprova.")
                 mess=await update.message.reply_text("Errore: fuso non valido. Riprova")
                 context.user_data["eliminare"].append(mess.message_id)
-                return 2
+                return 32
 
         elif dato == 'Città':
             if(not roba.startswith('=')): # Controlla validità
@@ -542,7 +541,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.warning("Valore inizia con =")
                 mess=await update.message.reply_text("Bel tentativo... Riprova.")
                 context.user_data["eliminare"].append(mess.message_id)
-                return 2
+                return 32
 
         else: # dato == 'Stato'
             if(not roba.startswith('=')): # Controlla validità
@@ -556,7 +555,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.warning("Valore inizia con =")
                 mess=await update.message.reply_text("Bel tentativo... Riprova.")
                 context.user_data["eliminare"].append(mess.message_id)
-                return 2
+                return 32
         await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
         context.user_data.clear() # Pulisce i dati raccolti
         logging.info("-"*50)
@@ -598,7 +597,7 @@ async def rmcacca_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data["cacche"]=ultime_cacche
                 context.user_data["messaggio"]=update.message.message_id
                 context.user_data["eliminare"]=[mess.message_id]
-                return 1
+                return 41
             else:
                 await update.message.reply_text("Non hai inserito cacche di recente.")
                 logging.info("Non ci sono cacche dell'utente nella tabella cacche.")
@@ -630,9 +629,10 @@ async def rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.info("-"*50)
             return ConversationHandler.END
         else:
+            logging.warning("Numero inserito non valido.")
             mess=await update.message.reply_text("Il numero inserito non è valido, riprova.")
             context.user_data["eliminare"].append(mess.message_id)
-            return 1
+            return 41
 
 # /annulla
 async def rmcacca_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -695,33 +695,34 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ),
             )
             context.user_data["eliminare"]=[mess.message_id]
-            return 1
+            logging.info("-"*50)
+            return 51
         else:
             logging.info("-"*50)
             return ConversationHandler.END
-    logging.info("-"*50)
 
 # Se dice sì, abbandona
 async def abbandona_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    LoggingCazzi.log_user_activity(update, "ABBANDONA_SI")
-    context.user_data["eliminare"].append(update.message.message_id)
-    try:
-        # Rimuovi dal database
-        user_id = update.message.from_user.id
-        cursor.execute("delete from cagatori where user_id=?", (user_id,))
-        await update.message.reply_text(f"Addio, ci mancherai! 😢", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
-        logging.info(f"Il cagatore {user_id} se n'è andato e non ritorna più.")
-        conn.commit()
-    except sqlite3.Error as e:
-        # Errore
-        await update.message.reply_text(f"Errore nella rimozione.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
-        logging.error(f"Errore nella rimozione: {e}")
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "ABBANDONA_SI")
+        context.user_data["eliminare"].append(update.message.message_id)
+        try:
+            # Rimuovi dal database
+            user_id = update.message.from_user.id
+            cursor.execute("delete from cagatori where user_id=?", (user_id,))
+            await update.message.reply_text(f"Addio, ci mancherai! 😢", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+            logging.info(f"Il cagatore {user_id} se n'è andato e non ritorna più.")
+            conn.commit()
+        except sqlite3.Error as e:
+            # Errore
+            await update.message.reply_text(f"Errore nella rimozione.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+            logging.error(f"Errore nella rimozione: {e}")
 
-    # Elimina messaggi
-    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
-    context.user_data.clear()
-    logging.info("-"*50)
-    return ConversationHandler.END
+        # Elimina messaggi
+        await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+        context.user_data.clear()
+        logging.info("-"*50)
+        return ConversationHandler.END
 
 # Annulla
 async def abbandona_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -772,6 +773,293 @@ async def aggiungi_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("Sintassi: /aggiungi <user_id> <nome_spreadsheet> <fuso UTC> <città> <stato>")
                 logging.info("Spiegata la sintassi di /aggiungi")
         logging.info("-"*50)
+
+# /sudo
+async def sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando per admin per la gestione"""
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_COMMAND")
+        # ADMIN ONLY
+        if(await HelpersCazzi.check_admin(update, cursor)):
+            context.user_data["eliminare"]=[update.message.message_id]
+
+            # Menu delle opzioni disponibili
+            keyboard=[['Aggiungere una cacca', 'Rimuovere una cacca'],['Aggiungere un nuovo cagatore', 'Rimuovere un cagatore'],['Nominare admin','Declassare admin']]
+
+            mess=await update.message.reply_text(
+                "Cosa vuoi fare? (/annulla in ogni momento per annullare)",
+                reply_markup=ReplyKeyboardMarkup(
+                    keyboard, one_time_keyboard=True, resize_keyboard=True, selective=True
+                ),
+            )
+            context.user_data["eliminare"].append(mess.message_id)
+            logging.info("-"*50)
+            return 61
+        else:
+            logging.warning(f"L'utente {update.effective_user.id} non è un admin")
+            logging.info("-"*50)
+            return ConversationHandler.END
+
+# Aggiungi cacca per un cagatore.
+async def sudo_addcacca(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_ADDCACCA", f"Messaggio: {update.message.text[:50]}...")
+        context.user_data["eliminare"].append(update.message.message_id)
+        mess=await update.message.reply_text(
+            "Inserire il nome del cagatore per cui vuoi inserire la cacca.", reply_markup=ReplyKeyboardRemove() # Fai sparire la tastiera
+        )
+        context.user_data["eliminare"].append(mess.message_id)
+        logging.info("-"*50)
+        return 62
+
+# Scrivi il messaggio che il cagatore avrebbe docuto scrivere.
+async def sudo_addcacca_messaggio(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_ADDCACCA_MESSAGGIO", f"Messaggio: {update.message.text[:50]}...")
+        context.user_data["eliminare"].append(update.message.message_id)
+        # Controlla che il cagatore esista
+        nome=update.message.text
+        # Prende i dati del cagatore, che ci serviranno più tardi
+        dati=cursor.execute("select nome, fuso, citta, stato from cagatori where nome=?", (nome,)).fetchone()
+        if(dati):
+            context.user_data["dati"]=dati
+            mess=await update.message.reply_text(
+                "Inserire il messaggio di cacca che il cagatore avrebbe dovuto scrivere (senza 💩 iniziale)."
+            )
+            context.user_data["eliminare"].append(mess.id)
+            logging.info("-"*50)
+            return 63
+        else:
+            # Errore
+            mess=await update.message.reply_text(
+                "Non c'è un cagatore con questo nome. Riprova."
+            )
+            context.user_data["eliminare"].append(mess.message_id)
+            logging.warning("Non c'è un cagatore con questo nome.")
+            logging.info("-"*50)
+            return 62
+
+# Ho copia-incollato tutto dall'handling dei messaggi di cacca e modificato qualcosina.
+async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_ADDCACCA_CONFERMA", f"Messaggio: {update.message.text[:50]}...")
+        context.user_data["eliminare"].append(update.message.message_id)
+
+        # Mi salvo il messaggio di cacca che ci servirà dopo.
+        user_message = update.message.text
+        context.user_data["mess_cacca"]=user_message
+
+        # Ripeschiamo i dati
+        [chi, fuso, citta, stato]=context.user_data["dati"]
+
+        # Per controllare se i dati devono essere aggiornati nel database.
+        flag = bool(False)
+
+        # Le keywords sono ora case insensitive
+        
+        if(re.search("altitudine: ", user_message, re.IGNORECASE)):
+            value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
+            altitudine=re.split(r'[,;\n]+',value)[0]
+            if(not altitudine.isdigit()):
+                await update.message.reply_text("Errore: altitudine non valida.")
+                logging.error("Errore: altitudine non valida.")
+                raise
+        else:
+            altitudine=""
+        if(re.search("velocità: ", user_message, re.IGNORECASE)):
+            value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
+            velocita=re.split(r'[,;\n]+',value)[0]
+            if(not velocita.isdigit()):
+                await update.message.reply_text("Errore: velocità non valida.")
+                logging.error("Errore: velocità non valida.")
+                raise
+        else:
+            velocita=""
+
+        # Dati potenzialmente da modificare nel database
+        if(re.search("città: ", user_message, re.IGNORECASE)):
+            flag = bool(True)
+            value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
+            citta=re.split(r'[,;\n]+',value)[0]
+            # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
+            if(citta.startswith('=')):
+                await update.message.reply_text("Bel tentativo...")
+                logging.error("Errore: Città inizia con '='.")
+                raise
+        if(re.search("fuso: ", user_message, re.IGNORECASE)):
+            flag = bool(True)
+            value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
+            fuso=re.split(r'[,;\n]+',value)[0]
+            if(not HelpersCazzi.is_integer(fuso)):
+                await update.message.reply_text("Errore: fuso non valido.")
+                logging.error(f"Errore: fuso non valido.")
+                raise
+            else:
+                fuso=int(fuso)
+        if(re.search("stato: ", user_message, re.IGNORECASE)):
+            flag = bool(True)
+            value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
+            stato=re.split(r'[,;\n]+',value)[0]
+            # Le stringhe non possono iniziare con =, altrimenti su google sheets è un casino
+            if(stato.startswith('=')):
+                await update.message.reply_text("Bel tentativo...")
+                logging.error("Errore: Stato inizia con '='.")
+                raise
+
+        # giorno e ora
+
+        # assumo che nessuno metta il giorno senza mettere l'ora
+        if(re.search("or[ae]: ", user_message, re.IGNORECASE)):
+            value = re.split("or[ae]: ", user_message, flags=re.IGNORECASE)[1]
+            ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
+            if(not ora):
+                await update.message.reply_text("Errore: ora non valida.")
+                logging.error("Errore: ora non valida.")
+                raise
+
+            if(re.search("giorno: ", user_message, re.IGNORECASE)):
+                value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
+                giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
+                if(not giorno):
+                    await update.message.reply_text("Errore: giorno non valido.")
+                    logging.error("Errore: giorno non valido.")
+                    raise
+            else:
+                # Per assicurarsi che il giorno sia localizzato.
+                data=update.message.date + timedelta(hours=fuso)
+                giorno = data.date().strftime('%d/%m/%y')
+        else:
+            # Fa lo shift in base al fuso orario
+            data=update.message.date + timedelta(hours=fuso)
+            giorno=data.date().strftime('%d/%m/%y')
+            ora=data.time().strftime('%H.%M')
+
+        if(flag):
+            try:
+                cursor.execute("update cagatori set citta=?, stato=?, fuso=? where nome=?", (citta, stato, fuso, chi))
+            except sqlite3.Error as e:
+                await update.message.reply_text("Errore: dati non validi.")
+                logging.error(f"Dati inseriti non validi: {e}")
+                raise
+
+        # Tastiera con le opzioni
+        keyboard=[["Sì", "No"]]
+
+        # Chiede conferma
+        ans = await update.message.reply_text(
+            f"Verranno inseriti i seguenti dati per {chi}:\n\nGiorno: {giorno}\nOra: {ora}\nCittà: {citta}\nStato: {stato}\nAltitudine: {altitudine}\nVelocità: {velocita}\n\nSono corretti?",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard, one_time_keyboard=True, resize_keyboard=True, selective=True
+            ),
+        )
+        context.user_data["roba"]=[chi, giorno, ora, citta, stato, altitudine, velocita]
+        context.user_data["aggiornare"]=flag
+        context.user_data["fuso"]=fuso
+        context.user_data["eliminare"].append(ans.message_id)
+        return 64
+
+# Inserisce la cacca se tutto è ok.
+async def sudo_addcacca_si(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_ADDCACCA_SI", f"Messaggio: {update.message.text[:50]}...")
+        context.user_data["eliminare"].append(update.message.message_id)
+
+        # Scrive il messaggio come se l'avesse scritto l'utente, e sarà l'unico messaggio che resta alla fine
+        ans = await context.bot.send_message(chat_id=update.message.chat_id, text=f"💩 ({context.user_data["dati"][0]})\n{context.user_data["mess_cacca"]}", reply_markup=ReplyKeyboardRemove())
+
+        roba=context.user_data["roba"]
+
+        cursor.execute("insert into cacche (nome, giorno, ora, citta, stato, altitudine, velocita, messaggio) values (?, ?, ?, ?, ?, ?, ?, ?)", (roba[0], roba[1], roba[2], roba[3], roba[4], roba[5], roba[6], ans.message_id))
+        conn.commit()
+        logging.info(f"Roba da inserire: {roba}")
+
+        # Cancella i messaggi precedenti
+        await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+
+        # Se tutto va bene, reagire con "👍"
+
+        await context.bot.set_message_reaction(
+            chat_id=update.message.chat_id,
+            message_id=ans.message_id,
+            reaction=[ReactionTypeEmoji("👍")]
+        )
+        logging.info("Dati cacca salvati.")
+        if(context.user_data["aggiornare"]):
+            logging.info(f"Aggiornati i dati di {roba[0]}: Città: {roba[3]}, Stato: {roba[4]}, Fuso: {context.user_data["fuso"]}")
+
+        context.user_data.clear()
+        logging.info("-"*50)
+        return ConversationHandler.END
+
+
+async def sudo_rmcacca(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_RMCACCA", f"Messaggio: {update.message.text[:50]}...")
+        await update.message.reply_text("Work in progress...", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+        context.user_data.clear()
+        logging.info("-"*50)
+        return ConversationHandler.END
+
+async def sudo_adduser(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_ADDUSER", f"Messaggio: {update.message.text[:50]}...")
+        await update.message.reply_text("Work in progress...", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+        context.user_data.clear()
+        logging.info("-"*50)
+        return ConversationHandler.END
+
+async def sudo_rmuser(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_RMUSER", f"Messaggio: {update.message.text[:50]}...")
+        await update.message.reply_text("Work in progress...", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+        context.user_data.clear()
+        logging.info("-"*50)
+        return ConversationHandler.END
+
+async def sudo_addadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_ADDADMIN", f"Messaggio: {update.message.text[:50]}...")
+        await update.message.reply_text("Work in progress...", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+        context.user_data.clear()
+        logging.info("-"*50)
+        return ConversationHandler.END
+
+async def sudo_rmadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_RMADMIN", f"Messaggio: {update.message.text[:50]}...")
+        await update.message.reply_text("Work in progress...", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+        context.user_data.clear()
+        logging.info("-"*50)
+        return ConversationHandler.END
+# Annulla
+async def sudo_annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    LoggingCazzi.log_user_activity(update, "SUDO_ANNULLA", f"Messaggio: {update.message.text[:50]}")
+    mess=await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+    conn.rollback() # Annulla update al database (serve nel caso di una cacca annullata).
+    context.user_data["eliminare"].append(update.message.message_id)
+    context.user_data["eliminare"].append(mess.message_id)
+
+    # Elimina messaggi
+
+    await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+    context.user_data.clear()
+    logging.info("Operazione annullata.")
+    logging.info("-"*50)
+    return ConversationHandler.END
+
+
+async def annulla(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    LoggingCazzi.log_user_activity(update, "ANNULLA", f"Messaggio: {update.message.text[:50]}")
+    mess=await update.message.reply_text("Operazione annullata.", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
+    conn.rollback() # Annulla update al database
+    context.user_data.clear()
+    logging.info("Operazione annullata.")
+    logging.info("-"*50)
+    return ConversationHandler.END
+
+
+
+
 
 
 # /rimuovi - Sintassi: /rimuovi <nome>
@@ -897,54 +1185,117 @@ def main():
 
 
         # Handler per i comandi
+
         application.add_handler(ConversationHandler(
-            entry_points=[MessageHandler(filters.Regex("^💩"), cacca_handle)],
+            entry_points=[MessageHandler(filters.Regex("^💩"), cacca_handle),
+                          CommandHandler("join", join_command),
+                          CommandHandler("setdato", setdato_command),
+                          CommandHandler("rmcacca", rmcacca_command),
+                          CommandHandler("abbandona", abbandona_command),
+                          CommandHandler("sudo", sudo_command)],
             states={
-                1: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), cacca_conferma)],
+                11: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), cacca_conferma), MessageHandler(filters.TEXT, cacca_annulla)],
+
+                21: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_nome), MessageHandler(filters.COMMAND, join_annulla)],
+                22: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_fuso), MessageHandler(filters.COMMAND, join_annulla)],
+                23: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_citta), MessageHandler(filters.COMMAND, join_annulla)],
+                24: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_stato), MessageHandler(filters.COMMAND, join_annulla)],
+
+                31: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT, setdato_annulla)],
+                32: [MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_cambia), MessageHandler(filters.COMMAND, setdato_annulla)],
+
+                41: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi), MessageHandler(filters.TEXT, rmcacca_annulla)],
+
+                51: [MessageHandler(filters.Regex("^Sì$"), abbandona_si), MessageHandler(filters.TEXT, abbandona_annulla)],
+
+                61: [MessageHandler(filters.Regex("^Aggiungere una cacca$"), sudo_addcacca,),
+                    MessageHandler(filters.Regex("^Rimuovere una cacca$"), sudo_rmcacca),
+                    MessageHandler(filters.Regex("^Aggiungere un nuovo cagatore$"), sudo_adduser),
+                    MessageHandler(filters.Regex("^Rimuovere un cagatore$"), sudo_rmuser),
+                    MessageHandler(filters.Regex("^Nominare admin$"), sudo_addadmin),
+                    MessageHandler(filters.Regex("^Declassare admin$"), sudo_rmadmin),
+                    MessageHandler(filters.TEXT, sudo_annulla)],
+
+                62: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_messaggio), MessageHandler(filters.COMMAND, sudo_annulla)],
+                63: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_conferma), MessageHandler(filters.COMMAND, sudo_annulla)],
+                64: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), sudo_addcacca_si), MessageHandler(filters.TEXT, sudo_annulla)],
+
             },
-            fallbacks=[MessageHandler(filters.TEXT, cacca_annulla)]
+            fallbacks=[MessageHandler(filters.TEXT, annulla)],
+            allow_reentry=False
         ))
+
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("comandi", comandi_command))
-        application.add_handler(ConversationHandler(
-            entry_points=[CommandHandler("join", join_command)],
-            states={
-                1: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_nome)],
-                2: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_fuso)],
-                3: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_citta)],
-                4: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_stato)]
-            },
-            fallbacks=[CommandHandler("annulla", join_annulla)],
-        ))
         application.add_handler(CommandHandler("sintassi", sintassi_command))
         application.add_handler(CommandHandler("mieidati", mieidati_command))
-        application.add_handler(ConversationHandler(
-            entry_points=[CommandHandler("setdato", setdato_command)],
-            states={
-                1: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT, setdato_annulla)],
-                2: [MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_cambia)]
-            },
-            fallbacks=[CommandHandler("annulla", setdato_annulla)]
-        ))
-        application.add_handler(ConversationHandler(
-            entry_points=[CommandHandler("rmcacca", rmcacca_command)],
-            states={
-                1: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi)]
-            },
-            fallbacks=[MessageHandler(filters.TEXT, rmcacca_annulla)],
-        ))
         application.add_handler(CommandHandler("cagatori", cagatori_command))
-        application.add_handler(ConversationHandler(
-            entry_points=[CommandHandler("abbandona", abbandona_command)],
-            states={
-                1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si)]
-            },
-            fallbacks=[MessageHandler(filters.TEXT, abbandona_annulla)],
-        ))
-        application.add_handler(CommandHandler("aggiungi", aggiungi_command))
-        application.add_handler(CommandHandler("rimuovi", rimuovi_command))
-        application.add_handler(CommandHandler("addadmin", addadmin_command))
-        application.add_handler(CommandHandler("rmadmin", rmadmin_command))
+
+        # application.add_handler(ConversationHandler(
+        #     entry_points=[MessageHandler(filters.Regex("^💩"), cacca_handle)],
+        #     states={
+        #         1: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), cacca_conferma)],
+        #     },
+        #     fallbacks=[MessageHandler(filters.TEXT, cacca_annulla)]
+        # ))
+
+        # application.add_handler(ConversationHandler(
+        #     entry_points=[CommandHandler("join", join_command)],
+        #     states={
+        #         1: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_nome)],
+        #         2: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_fuso)],
+        #         3: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_citta)],
+        #         4: [MessageHandler(filters.TEXT & ~filters.COMMAND, join_stato)]
+        #     },
+        #     fallbacks=[CommandHandler("annulla", join_annulla)],
+        # ))
+        
+        # application.add_handler(ConversationHandler(
+        #     entry_points=[CommandHandler("setdato", setdato_command)],
+        #     states={
+        #         1: [MessageHandler(filters.Regex("^(Fuso|Città|Stato)$"), setdato_dato), MessageHandler(filters.TEXT, setdato_annulla)],
+        #         2: [MessageHandler(filters.TEXT & ~filters.COMMAND, setdato_cambia)]
+        #     },
+        #     fallbacks=[CommandHandler("annulla", setdato_annulla)]
+        # ))
+        # application.add_handler(ConversationHandler(
+        #     entry_points=[CommandHandler("rmcacca", rmcacca_command)],
+        #     states={
+        #         1: [MessageHandler(filters.Regex("^[0-9]*$"), rmcacca_rimuovi)]
+        #     },
+        #     fallbacks=[MessageHandler(filters.TEXT, rmcacca_annulla)],
+        # ))
+        
+        # application.add_handler(ConversationHandler(
+        #     entry_points=[CommandHandler("abbandona", abbandona_command)],
+        #     states={
+        #         1: [MessageHandler(filters.Regex("^Sì$"), abbandona_si)]
+        #     },
+        #     fallbacks=[MessageHandler(filters.TEXT, abbandona_annulla)],
+        # ))
+        #application.add_handler(CommandHandler("aggiungi", aggiungi_command))
+        #application.add_handler(CommandHandler("rimuovi", rimuovi_command))
+        #application.add_handler(CommandHandler("addadmin", addadmin_command))
+        #application.add_handler(CommandHandler("rmadmin", rmadmin_command))
+
+        # application.add_handler(ConversationHandler(
+        #     entry_points=[CommandHandler("sudo", sudo_command)],
+        #     states={
+        #         1: [MessageHandler(filters.Regex("^Aggiungere una cacca$"), sudo_addcacca),
+        #             MessageHandler(filters.Regex("^Rimuovere una cacca$"), sudo_rmcacca),
+        #             MessageHandler(filters.Regex("^Aggiungere un nuovo cagatore$"), sudo_adduser),
+        #             MessageHandler(filters.Regex("^Rimuovere un cagatore$"), sudo_rmuser),
+        #             MessageHandler(filters.Regex("^Nominare admin$"), sudo_addadmin),
+        #             MessageHandler(filters.Regex("^Declassare admin$"), sudo_rmadmin)],
+
+        #         2: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_messaggio)],
+        #         3: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_conferma)],
+        #         4: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), sudo_addcacca_si)],
+
+
+        #     },
+        #     fallbacks=[MessageHandler(filters.TEXT, sudo_annulla)]
+        # ))
 
         # Fa partire il bot
         logging.info("Bot partito...")
@@ -955,7 +1306,7 @@ def main():
 
 if __name__ == '__main__':
 
-    # Memorizza le cacche e le invia ogni ora in blocco
+    # Memorizza le cacche e le invia ogni tot in blocco
     scheduler = BackgroundScheduler()
     scheduler.add_job(sheets_handler.inserisci_cacche, "interval", minutes=FREQUENZA_CHECK)
     scheduler.start()
