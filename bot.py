@@ -52,7 +52,7 @@ except sqlite3.Error as e:
 sheets_handler = GoogleSheetsCazzi.GoogleSheetsHandler(GOOGLE_SHEETS_CREDENTIALS_FILE, SPREADSHEET_URL)
 
 # Nomi sensati per i valori ritornati nelle conversazioni
-CACCA_CONFERMA, JOIN_NOME, JOIN_FUSO, JOIN_CITTA, JOIN_STATO, SETDATO_DATO, SETDATO_CAMBIA, RMCACCA_RIMUOVI, ABBANDONA_SI, SUDO_MENU, SUDO_ADDCACCA_MESSAGGIO, SUDO_ADDCACCA_CONFERMA, SUDO_ADDCACCA_SI, SUDO_RMCACCA_SCEGLI, SUDO_RMCACCA_RIMUOVI = range(15)
+CACCA_CONFERMA, JOIN_NOME, JOIN_FUSO, JOIN_CITTA, JOIN_STATO, SETDATO_DATO, SETDATO_CAMBIA, RMCACCA_RIMUOVI, ABBANDONA_SI, SUDO_MENU, SUDO_ADDCACCA_MESSAGGIO, SUDO_ADDCACCA_CONFERMA, SUDO_ADDCACCA_SI, SUDO_RMCACCA_SCEGLI, SUDO_RMCACCA_RIMUOVI, SUDO_ADDADMIN_PROMUOVI, SUDO_RMADMIN_DECLASSA = range(17)
 
 
 # Comandi Bot
@@ -693,7 +693,6 @@ async def abbandona_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ),
             )
             context.user_data["eliminare"]=[mess.message_id]
-            logging.info("-"*50)
             return ABBANDONA_SI
         else:
             logging.info("-"*50)
@@ -759,7 +758,6 @@ async def sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ),
             )
             context.user_data["eliminare"].append(mess.message_id)
-            logging.info("-"*50)
             return SUDO_MENU
         else:
             logging.warning(f"L'utente {update.effective_user.id} non è un admin")
@@ -775,7 +773,6 @@ async def sudo_addcacca(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Inserire il nome del cagatore per cui vuoi inserire la cacca.", reply_markup=ReplyKeyboardRemove() # Fai sparire la tastiera
         )
         context.user_data["eliminare"].append(mess.message_id)
-        logging.info("-"*50)
         return SUDO_ADDCACCA_MESSAGGIO
 
 # Scrivi il messaggio che il cagatore avrebbe docuto scrivere.
@@ -793,7 +790,6 @@ async def sudo_addcacca_messaggio(update: Update, context: ContextTypes.DEFAULT_
                 "Inserire il messaggio di cacca che il cagatore avrebbe dovuto scrivere (senza 💩 iniziale)."
             )
             context.user_data["eliminare"].append(mess.id)
-            logging.info("-"*50)
             return SUDO_ADDCACCA_CONFERMA
         else:
             # Errore
@@ -802,7 +798,6 @@ async def sudo_addcacca_messaggio(update: Update, context: ContextTypes.DEFAULT_
             )
             context.user_data["eliminare"].append(mess.message_id)
             logging.warning("Non c'è un cagatore con questo nome.")
-            logging.info("-"*50)
             return SUDO_ADDCACCA_MESSAGGIO
 
 # Ho copia-incollato tutto dall'handling dei messaggi di cacca e modificato qualcosina.
@@ -966,7 +961,6 @@ async def sudo_rmcacca(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Inserire il nome del cagatore per cui vuoi togliere una cacca.", reply_markup=ReplyKeyboardRemove() # Fai sparire la tastiera
         )
         context.user_data["eliminare"].append(mess.message_id)
-        logging.info("-"*50)
         return SUDO_RMCACCA_SCEGLI
 
 # Scegli la cacca, se il cagatore con quel nome esiste
@@ -1001,9 +995,9 @@ async def sudo_rmcacca_scegli(update: Update, context: ContextTypes.DEFAULT_TYPE
             )
             context.user_data["eliminare"].append(mess.message_id)
             logging.warning("Non c'è un cagatore con questo nome.")
-            logging.info("-"*50)
             return SUDO_RMCACCA_SCEGLI
 
+# Procede a rimuovere la cacca
 async def sudo_rmcacca_rimuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SUDO_RMCACCA_RIMUOVI", f"Messaggio: {update.message.text[:50]}...")
@@ -1045,19 +1039,63 @@ async def sudo_rmuser(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info("-"*50)
         return ConversationHandler.END
 
+# Nomina un cagatore admin
 async def sudo_addadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SUDO_ADDADMIN", f"Messaggio: {update.message.text[:50]}...")
-        await update.message.reply_text("Work in progress...", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
-        context.user_data.clear()
+        context.user_data["eliminare"].append(update.message.message_id)
+        mess=await update.message.reply_text(
+            "Inserire il nome del cagatore che vuoi rendere admin.", reply_markup=ReplyKeyboardRemove() # Fai sparire la tastiera
+        )
+        context.user_data["eliminare"].append(mess.message_id)
+        return SUDO_ADDADMIN_PROMUOVI
+
+# Rende il cagatore admin
+async def sudo_addadmin_promuovi(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_ADDADMIN_PROMUOVI", f"Messaggio: {update.message.text[:50]}...")
+        context.user_data["eliminare"].append(update.message.message_id)
+        nome=update.message.text
+        if(cursor.execute("select nome from cagatori where nome=?", (nome,)).fetchone()):
+            cursor.execute("update cagatori set admin=1 where nome=?", (nome,))
+            conn.commit()
+            await context.bot.send_message(chat_id=update.message.chat_id, text=f"{nome} è ora un admin.")
+            logging.info(f"{nome} è ora un admin.")
+            await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+        else:
+            await update.message.reply_text("Non esiste un cagatore con questo nome")
+            logging.warning(f"Non esiste un cagatore che si chiama {nome}")
+        context.user_data.clear() # Pulisce i dati raccolti
         logging.info("-"*50)
         return ConversationHandler.END
 
+# Rimuovi qualcuno dal ruolo di admin
 async def sudo_rmadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SUDO_RMADMIN", f"Messaggio: {update.message.text[:50]}...")
-        await update.message.reply_text("Work in progress...", reply_markup=ReplyKeyboardRemove()) # Fai sparire la tastiera
-        context.user_data.clear()
+        context.user_data["eliminare"].append(update.message.message_id)
+        mess=await update.message.reply_text(
+            "Inserire il nome dell'admin a cui vuoi togliere i poteri di admin.", reply_markup=ReplyKeyboardRemove() # Fai sparire la tastiera
+        )
+        context.user_data["eliminare"].append(mess.message_id)
+        return SUDO_RMADMIN_DECLASSA
+
+# Toglie i poteri di admin
+async def sudo_addadmin_declassa(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if(update.message):
+        LoggingCazzi.log_user_activity(update, "SUDO_RMADMIN_DECLASSA", f"Messaggio: {update.message.text[:50]}...")
+        context.user_data["eliminare"].append(update.message.message_id)
+        nome=update.message.text
+        if(cursor.execute("select nome from cagatori where nome=? and admin=1", (nome,)).fetchone()):
+            cursor.execute("update cagatori set admin=0 where nome=?", (nome,))
+            conn.commit()
+            await context.bot.send_message(chat_id=update.message.chat_id, text=f"{nome} ora non è più un admin.")
+            logging.info(f"{nome} ora non è più un admin.")
+            await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
+        else:
+            await update.message.reply_text("Non esiste un admin con questo nome")
+            logging.warning(f"Non esiste un admin che si chiama {nome}")
+        context.user_data.clear() # Pulisce i dati raccolti
         logging.info("-"*50)
         return ConversationHandler.END
 
@@ -1280,6 +1318,10 @@ def main():
 
                 SUDO_RMCACCA_SCEGLI: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_rmcacca_scegli), MessageHandler(filters.TEXT, sudo_annulla)],
                 SUDO_RMCACCA_RIMUOVI: [MessageHandler(filters.Regex("^[0-9]*$"), sudo_rmcacca_rimuovi), MessageHandler(filters.TEXT, sudo_annulla)],
+
+                SUDO_ADDADMIN_PROMUOVI: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addadmin_promuovi), MessageHandler(filters.COMMAND, sudo_annulla)],
+
+                SUDO_RMADMIN_DECLASSA: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addadmin_declassa), MessageHandler(filters.COMMAND, sudo_annulla)],
 
             },
             fallbacks=[MessageHandler(filters.TEXT, annulla)],

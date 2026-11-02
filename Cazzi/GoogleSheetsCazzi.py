@@ -65,7 +65,7 @@ class GoogleSheetsHandler:
             raise
 
         # Inserisce cacche nello spreadsheet
-        # Inserisce quelle più vecchie di un giorno
+        # Inserisce quelle più vecchie di un tot
         ieri = datetime.now(timezone.utc) - timedelta(minutes=TEMPO_PER_RMCACCA)
         ieri_iso = ieri.strftime("%Y-%m-%d %H:%M:%S")
         lcursor.execute("select nome, giorno, ora, citta, stato, altitudine, velocita from cacche where timestamp <= ?", (ieri_iso,))
