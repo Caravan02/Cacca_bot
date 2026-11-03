@@ -851,25 +851,34 @@ async def sudo_addcacca_messaggio(update: Update, context: ContextTypes.DEFAULT_
     if(update.message):
         LoggingCazzi.log_user_activity(update, "SUDO_ADDCACCA_MESSAGGIO", f"Messaggio: {update.message.text[:50]}...")
         context.user_data["eliminare"].append(update.message.message_id)
-        # Controlla che il cagatore esista
-        nome=update.message.text
-        # Prende i dati del cagatore, che ci serviranno più tardi
-        dati=cursor.execute("select nome, fuso, citta, stato from cagatori where nome=?", (nome,)).fetchone()
-        if(dati):
-            context.user_data["dati"]=dati
+        # Se abbiamo scelto 'No' nella conferma allora torniamo qui, ma il cagatore è già stato inserito. Quindi vogliamo tenere i dati del cagatore che avevamo scelto.
+        if("dati" in context.user_data):
+            logging.info("Il cagatore era già stato inserito, quindi non lo richiediamo")
             mess=await update.message.reply_text(
-                "Inserire il messaggio di cacca che il cagatore avrebbe dovuto scrivere (senza 💩 iniziale)."
+                "Inserire il messaggio di cacca che il cagatore avrebbe dovuto scrivere (con 💩 iniziale)."
             )
             context.user_data["eliminare"].append(mess.id)
             return SUDO_ADDCACCA_CONFERMA
         else:
-            # Errore
-            mess=await update.message.reply_text(
-                "Non c'è un cagatore con questo nome. Riprova."
-            )
-            context.user_data["eliminare"].append(mess.message_id)
-            logging.warning("Non c'è un cagatore con questo nome.")
-            return SUDO_ADDCACCA_MESSAGGIO
+            # Controlla che il cagatore esista
+            nome=update.message.text
+            # Prende i dati del cagatore, che ci serviranno più tardi
+            dati=cursor.execute("select nome, fuso, citta, stato from cagatori where nome=?", (nome,)).fetchone()
+            if(dati):
+                context.user_data["dati"]=dati
+                mess=await update.message.reply_text(
+                    "Inserire il messaggio di cacca che il cagatore avrebbe dovuto scrivere (con 💩 iniziale)."
+                )
+                context.user_data["eliminare"].append(mess.id)
+                return SUDO_ADDCACCA_CONFERMA
+            else:
+                # Errore
+                mess=await update.message.reply_text(
+                    "Non c'è un cagatore con questo nome. Riprova."
+                )
+                context.user_data["eliminare"].append(mess.message_id)
+                logging.warning("Non c'è un cagatore con questo nome.")
+                return SUDO_ADDCACCA_MESSAGGIO
 
 # Ho copia-incollato tutto dall'handling dei messaggi di cacca e modificato qualcosina.
 async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -893,18 +902,20 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
             altitudine=re.split(r'[,;\n]+',value)[0]
             if(not altitudine.isdigit()):
-                await update.message.reply_text("Errore: altitudine non valida. Riprova.")
+                err = await update.message.reply_text("Errore: altitudine non valida. Riprova.")
+                context.user_data["eliminare"].append(err.message_id)
                 logging.warning("Errore: altitudine non valida.")
-                return SUDO_ADDCACCA_MESSAGGIO
+                return SUDO_ADDCACCA_CONFERMA
         else:
             altitudine=""
         if(re.search("velocità: ", user_message, re.IGNORECASE)):
             value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
             velocita=re.split(r'[,;\n]+',value)[0]
             if(not velocita.isdigit()):
-                await update.message.reply_text("Errore: velocità non valida. Riprova.")
+                err = await update.message.reply_text("Errore: velocità non valida. Riprova.")
+                context.user_data["eliminare"].append(err.message_id)
                 logging.warning("Errore: velocità non valida.")
-                return SUDO_ADDCACCA_MESSAGGIO
+                return SUDO_ADDCACCA_CONFERMA
         else:
             velocita=""
 
@@ -914,17 +925,19 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
             citta=re.split(r'[,;\n]+',value)[0]
             if(not citta.isalpha()):
-                await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
+                err = await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
+                context.user_data["eliminare"].append(err.message_id)
                 logging.warning("Errore: città contiene caratteri che non sono lettere. Riprova.")
-                return SUDO_ADDCACCA_MESSAGGIO
+                return SUDO_ADDCACCA_CONFERMA
         if(re.search("fuso: ", user_message, re.IGNORECASE)):
             flag = bool(True)
             value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
             fuso=re.split(r'[,;\n]+',value)[0]
             if(not HelpersCazzi.is_integer(fuso)):
-                await update.message.reply_text("Errore: fuso non valido (deve essere un intero). Riprova.")
+                err = await update.message.reply_text("Errore: fuso non valido (deve essere un intero). Riprova.")
+                context.user_data["eliminare"].append(err.message_id)
                 logging.warning("Errore: fuso non valido.")
-                return SUDO_ADDCACCA_MESSAGGIO
+                return SUDO_ADDCACCA_CONFERMA
             else:
                 fuso=int(fuso)
         if(re.search("stato: ", user_message, re.IGNORECASE)):
@@ -932,9 +945,10 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
             stato=re.split(r'[,;\n]+',value)[0]
             if(not stato.isalpha()):
-                await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
+                err = await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
+                context.user_data["eliminare"].append(err.message_id)
                 logging.warning("Errore: stato contiene caratteri che non sono lettere.")
-                return SUDO_ADDCACCA_MESSAGGIO
+                return SUDO_ADDCACCA_CONFERMA
 
         # giorno e ora
 
@@ -943,17 +957,19 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             value = re.split("or[ae]: ", user_message, flags=re.IGNORECASE)[1]
             ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
             if(not ora):
-                await update.message.reply_text("Errore: ora non valida. Riprova.")
+                err = await update.message.reply_text("Errore: ora non valida. Riprova.")
+                context.user_data["eliminare"].append(err.message_id)
                 logging.warning("Errore: ora non valida.")
-                return SUDO_ADDCACCA_MESSAGGIO
+                return SUDO_ADDCACCA_CONFERMA
 
             if(re.search("giorno: ", user_message, re.IGNORECASE)):
                 value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
                 giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
                 if(not giorno):
-                    await update.message.reply_text("Errore: giorno non valido. Riprova.")
+                    err = await update.message.reply_text("Errore: giorno non valido. Riprova.")
+                    context.user_data["eliminare"].append(err.message_id)
                     logging.warning("Errore: giorno non valido.")
-                    return SUDO_ADDCACCA_MESSAGGIO
+                    return SUDO_ADDCACCA_CONFERMA
             else:
                 # Per assicurarsi che il giorno sia localizzato.
                 data=update.message.date + timedelta(hours=fuso)
@@ -1198,7 +1214,7 @@ def main():
 
                 SUDO_ADDCACCA_MESSAGGIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_messaggio), MessageHandler(filters.COMMAND, sudo_annulla)],
                 SUDO_ADDCACCA_CONFERMA: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_conferma), MessageHandler(filters.COMMAND, sudo_annulla)],
-                SUDO_ADDCACCA_SI: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), sudo_addcacca_si), MessageHandler(filters.TEXT, sudo_annulla)],
+                SUDO_ADDCACCA_SI: [MessageHandler(filters.Regex("(?i)^(sì|si|y|s)$"), sudo_addcacca_si), MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_addcacca_messaggio), MessageHandler(filters.COMMAND, sudo_annulla)],
 
                 SUDO_RMADMIN_DECLASSA: [MessageHandler(filters.TEXT & ~filters.COMMAND, sudo_rmadmin_declassa), MessageHandler(filters.COMMAND, sudo_annulla)],
 
