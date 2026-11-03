@@ -11,7 +11,7 @@ WORKSHEET_NAME = os.getenv('WORKSHEET_NAME')
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 GRUPPO_CACCA = int(os.getenv('GRUPPO_CACCA'))
 FREQUENZA_CHECK = int(os.getenv('FREQUENZA_CHECK', '60'))
-TEMPO_PER_RMCACCA = int(os.getenv('TEMPO_PER_RMCACCA', '3600'))
+TEMPO_PER_RMCACCA = int(os.getenv('TEMPO_PER_RMCACCA', '1440'))
 
 # Controlla che tutte siano definite
 required_vars = ['TELEGRAM_BOT_TOKEN', 'GOOGLE_SHEETS_CREDENTIALS_FILE', 'SPREADSHEET_URL', 'WORKSHEET_NAME', 'GRUPPO_CACCA']

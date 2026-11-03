@@ -242,7 +242,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Messaggio
             await update.message.reply_text("""
 Cosa fare se sei appena entrato nel gruppo:
-- Diventa un cagatore con il comando /join, inserendo i tuoi dati: nome sullo spreadheet, fuso orario, città e stato.
+- Diventa un cagatore con il comando /join, inserendo i tuoi dati: nome sullo spreadsheet, fuso orario, città e stato.
 
 Come vengono trattati i messaggi di cacca?
 - Se hai fatto /join, i messaggi inviati che iniziano con "💩" saranno contati come cacche, e i dati relativi registrati nello spreadsheet.
