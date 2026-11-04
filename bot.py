@@ -109,9 +109,9 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     flag = bool(True)
                     value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
                     citta=re.split(r'[,;\n]+',value)[0]
-                    if(not citta.isalpha()):
-                        await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
-                        logging.warning("Errore: città contiene caratteri che non sono lettere.")
+                    if(not HelpersCazzi.valid_name(citta)):
+                        await update.message.reply_text("Errore: città non valida (sono accettati solo lettere, spazi e trattini). Riprova.")
+                        logging.warning("Errore: città contiene caratteri che non sono ammessi.")
                         logging.info("-"*50)
                         return ConversationHandler.END
                 if(re.search("fuso: ", user_message, re.IGNORECASE)):
@@ -129,9 +129,9 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     flag = bool(True)
                     value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
                     stato=re.split(r'[,;\n]+',value)[0]
-                    if(not stato.isalpha()):
-                        await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
-                        logging.warning("Errore: stato contiene caratteri che non sono lettere.")
+                    if(not HelpersCazzi.valid_name(stato)):
+                        await update.message.reply_text("Errore: stato non valido (sono accettati solo lettere, spazi e trattini). Riprova.")
+                        logging.warning("Errore: stato contiene caratteri che non sono ammessi.")
                         logging.info("-"*50)
                         return ConversationHandler.END
 
@@ -313,7 +313,7 @@ async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_NOME", f"Messaggio: {update.message.text[:50]}")
         context.user_data["eliminare"].append(update.message.message_id)
-        if(update.message.text.isalpha()): # Controlla il nome
+        if(HelpersCazzi.valid_name(update.message.text)): # Controlla il nome
             context.user_data["nome"]=update.message.text # Registra il nome
             mess=await update.message.reply_text( # Chiede il fuso
                 "Inserisci il tuo fuso orario UTC (esempio: +1)."
@@ -323,7 +323,7 @@ async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return JOIN_FUSO
         else:
             logging.warning("Nome non valido")
-            mess=await update.message.reply_text("Errore: nome non valido (sono accettate solo lettere). Riprova.")
+            mess=await update.message.reply_text("Errore: nome non valido (sono accettati solo lettere, spazi e trattini). Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
             return JOIN_NOME # Se non è valido, richiede il nome
 
@@ -352,7 +352,7 @@ async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         context.user_data["eliminare"].append(update.message.message_id)
         LoggingCazzi.log_user_activity(update, "JOIN_CITTA", f"Messaggio: {update.message.text[:50]}")
-        if(update.message.text.isalpha()): # Controlla la città
+        if(HelpersCazzi.valid_name(update.message.text)): # Controlla la città
             context.user_data["citta"]=update.message.text # Registra la città
             mess=await update.message.reply_text( # Chiede lo stato
                 "Inserisci il tuo stato."
@@ -362,7 +362,7 @@ async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return JOIN_STATO
         else:
             logging.warning("Città non valida.")
-            mess=await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
+            mess=await update.message.reply_text("Errore: città non valida (sono accettati solo lettere, spazi e trattini). Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
             return JOIN_CITTA # Se non è valido, richiede la città
 
@@ -372,7 +372,7 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LoggingCazzi.log_user_activity(update, "JOIN_STATO", f"Messaggio: {update.message.text[:50]}")
         context.user_data["eliminare"].append(update.message.message_id)
         stato=update.message.text
-        if(stato.isalpha()): # Controlla lo stato
+        if(HelpersCazzi.valid_name(stato)): # Controlla lo stato
             # Prende i dati
             user_id=update.message.from_user.id
             nome=context.user_data["nome"]
@@ -398,7 +398,7 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             # Se non è valido, richiede lo stato
             logging.warning("Stato non valido.")
-            mess=await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
+            mess=await update.message.reply_text("Errore: stato non valido (sono accettati solo lettere, spazi e trattini). Riprova.")
             context.user_data["eliminare"].append(mess.message_id)
             return JOIN_STATO
 
@@ -537,7 +537,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return SETDATO_CAMBIA
 
         elif dato == 'Città':
-            if(roba.isalpha()): # Controlla validità
+            if(HelpersCazzi.valid_name(roba)): # Controlla validità
                 # Aggiorna dato
                 cursor.execute("update cagatori set citta=? where user_id=?", (roba, user_id))
                 await update.message.reply_text(f"Città aggiornata a {roba}.")
@@ -546,12 +546,12 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 # Errore
                 logging.warning("Città non valida.")
-                mess=await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
+                mess=await update.message.reply_text("Errore: città non valida (sono accettati solo lettere, spazi e trattini). Riprova.")
                 context.user_data["eliminare"].append(mess.message_id)
                 return SETDATO_CAMBIA
 
         else: # dato == 'Stato'
-            if(roba.isalpha()): # Controlla validità
+            if(HelpersCazzi.valid_name(roba)): # Controlla validità
                 # Aggiorna dato
                 cursor.execute("update cagatori set stato=? where user_id=?", (roba, user_id))
                 await update.message.reply_text(f"Stato aggiornato a {roba}.")
@@ -560,7 +560,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 # Errore
                 logging.warning("Stato non valido.")
-                mess=await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
+                mess=await update.message.reply_text("Errore: stato non valido (sono accettati solo lettere, spazi e trattini). Riprova.")
                 context.user_data["eliminare"].append(mess.message_id)
                 return SETDATO_CAMBIA
         await context.bot.delete_messages(chat_id=update.message.chat_id, message_ids=context.user_data["eliminare"])
@@ -933,10 +933,10 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             flag = bool(True)
             value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
             citta=re.split(r'[,;\n]+',value)[0]
-            if(not citta.isalpha()):
-                err = await update.message.reply_text("Errore: città non valida (sono accettate solo lettere). Riprova.")
+            if(not HelpersCazzi.valid_name(citta)):
+                err = await update.message.reply_text("Errore: città non valida (sono accettati solo lettere, spazi e trattini). Riprova.")
                 context.user_data["eliminare"].append(err.message_id)
-                logging.warning("Errore: città contiene caratteri che non sono lettere. Riprova.")
+                logging.warning("Errore: città contiene caratteri che non sono ammessi. Riprova.")
                 return SUDO_ADDCACCA_CONFERMA
         if(re.search("fuso: ", user_message, re.IGNORECASE)):
             flag = bool(True)
@@ -953,10 +953,10 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             flag = bool(True)
             value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
             stato=re.split(r'[,;\n]+',value)[0]
-            if(not stato.isalpha()):
-                err = await update.message.reply_text("Errore: stato non valido (sono accettate solo lettere). Riprova.")
+            if(not HelpersCazzi.valid_name(stato)):
+                err = await update.message.reply_text("Errore: stato non valido (sono accettati solo lettere, spazi e trattini). Riprova.")
                 context.user_data["eliminare"].append(err.message_id)
-                logging.warning("Errore: stato contiene caratteri che non sono lettere.")
+                logging.warning("Errore: stato contiene caratteri che non sono ammessi.")
                 return SUDO_ADDCACCA_CONFERMA
 
         # giorno e ora

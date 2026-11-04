@@ -64,7 +64,11 @@ async def check_admin(update: Update, cursor: sqlite3.Cursor) -> bool:
         else:
             logging.warning("L'utente non sta messaggiando dal gruppo giusto e non è un admin.")
         return False # Non admin
-        
+
+# Restituisce true se la stringa contiene solamente lettere (anche straniere o ideogrammi), spazi e trattini.
+def valid_name(string: str) -> bool:
+    return all(c.isalpha() or c == ' ' or c == '-' for c in string)
+
 # Restituisce il giorno nel formato standard se è stato inserito bene (più o meno), None altrimenti. Formato standard: gg/mm/aa
 def valid_day(date_string: str) -> str:
     if(re.compile(r"^[0-3]\d\/(0\d|1[0-2])\/(\d{2})( )*$").match(date_string)):
