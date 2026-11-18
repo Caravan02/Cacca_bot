@@ -85,7 +85,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
                 if(re.search("altitudine: ", user_message, re.IGNORECASE)):
                     value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
-                    altitudine=re.split(r'[,;\n]+',value)[0]
+                    altitudine=re.split(r'[,;\n]+',value)[0].strip()
                     if(not altitudine.isdigit()):
                         await update.message.reply_text("Errore: altitudine non valida. Riprova.")
                         logging.warning("Errore: altitudine non valida.")
@@ -95,7 +95,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     altitudine=""
                 if(re.search("velocità: ", user_message, re.IGNORECASE)):
                     value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
-                    velocita=re.split(r'[,;\n]+',value)[0]
+                    velocita=re.split(r'[,;\n]+',value)[0].strip()
                     if(not velocita.isdigit()):
                         await update.message.reply_text("Errore: velocità non valida. Riprova.")
                         logging.warning("Errore: velocità non valida.")
@@ -108,7 +108,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if(re.search("città: ", user_message, re.IGNORECASE)):
                     flag = bool(True)
                     value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
-                    citta=re.split(r'[,;\n]+',value)[0]
+                    citta=re.split(r'[,;\n]+',value)[0].strip()
                     if(not HelpersCazzi.valid_name(citta)):
                         await update.message.reply_text("Errore: città non valida (sono accettati solo lettere, spazi e trattini). Riprova.")
                         logging.warning("Errore: città contiene caratteri che non sono ammessi.")
@@ -117,7 +117,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if(re.search("fuso: ", user_message, re.IGNORECASE)):
                     flag = bool(True)
                     value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
-                    fuso=re.split(r'[,;\n]+',value)[0]
+                    fuso=re.split(r'[,;\n]+',value)[0].strip()
                     if(not HelpersCazzi.is_integer(fuso)):
                         await update.message.reply_text("Errore: fuso non valido (deve essere un intero). Riprova.")
                         logging.warning("Errore: fuso non valido.")
@@ -128,7 +128,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if(re.search("stato: ", user_message, re.IGNORECASE)):
                     flag = bool(True)
                     value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
-                    stato=re.split(r'[,;\n]+',value)[0]
+                    stato=re.split(r'[,;\n]+',value)[0].strip()
                     if(not HelpersCazzi.valid_name(stato)):
                         await update.message.reply_text("Errore: stato non valido (sono accettati solo lettere, spazi e trattini). Riprova.")
                         logging.warning("Errore: stato contiene caratteri che non sono ammessi.")
@@ -140,7 +140,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # assumo che nessuno metta il giorno senza mettere l'ora
                 if(re.search("or[ae]: ", user_message, re.IGNORECASE)):
                     value = re.split("or[ae]: ", user_message, flags=re.IGNORECASE)[1]
-                    ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
+                    ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0].strip())
                     if(not ora):
                         await update.message.reply_text("Errore: ora non valida. Riprova.")
                         logging.warning("Errore: ora non valida.")
@@ -149,7 +149,7 @@ async def cacca_handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     if(re.search("giorno: ", user_message, re.IGNORECASE)):
                         value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
-                        giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
+                        giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0].strip())
                         if(not giorno):
                             await update.message.reply_text("Errore: giorno non valido. Riprova.")
                             logging.warning("Errore: giorno non valido.")
@@ -313,8 +313,9 @@ async def join_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_NOME", f"Messaggio: {update.message.text[:50]}")
         context.user_data["eliminare"].append(update.message.message_id)
-        if(HelpersCazzi.valid_name(update.message.text)): # Controlla il nome
-            context.user_data["nome"]=update.message.text # Registra il nome
+        nome=update.message.text.strip()
+        if(HelpersCazzi.valid_name(nome)): # Controlla il nome
+            context.user_data["nome"]=nome # Registra il nome
             mess=await update.message.reply_text( # Chiede il fuso
                 "Inserisci il tuo fuso orario UTC (esempio: +1)."
             )
@@ -332,7 +333,7 @@ async def join_fuso(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_FUSO", f"Messaggio: {update.message.text[:50]}")
         context.user_data["eliminare"].append(update.message.message_id)
-        fuso=update.message.text
+        fuso=update.message.text.strip()
         if(HelpersCazzi.is_integer(fuso)): # Controlla il fuso
             context.user_data["fuso"]=int(fuso) # Registra il fuso
             mess=await update.message.reply_text( # Chiede la città
@@ -352,8 +353,9 @@ async def join_citta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         context.user_data["eliminare"].append(update.message.message_id)
         LoggingCazzi.log_user_activity(update, "JOIN_CITTA", f"Messaggio: {update.message.text[:50]}")
-        if(HelpersCazzi.valid_name(update.message.text)): # Controlla la città
-            context.user_data["citta"]=update.message.text # Registra la città
+        citta=update.message.text.strip()
+        if(HelpersCazzi.valid_name(citta)): # Controlla la città
+            context.user_data["citta"]=citta # Registra la città
             mess=await update.message.reply_text( # Chiede lo stato
                 "Inserisci il tuo stato."
             )
@@ -371,7 +373,7 @@ async def join_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if(update.message):
         LoggingCazzi.log_user_activity(update, "JOIN_STATO", f"Messaggio: {update.message.text[:50]}")
         context.user_data["eliminare"].append(update.message.message_id)
-        stato=update.message.text
+        stato=update.message.text.strip()
         if(HelpersCazzi.valid_name(stato)): # Controlla lo stato
             # Prende i dati
             user_id=update.message.from_user.id
@@ -519,7 +521,7 @@ async def setdato_cambia(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Prende le informazioni
         user_id=update.message.from_user.id
         dato=context.user_data["dato"]
-        roba=update.message.text
+        roba=update.message.text.strip()
         if dato == 'Fuso':
             # Controlla fuso
             if(HelpersCazzi.is_integer(roba)): # Controlla validità
@@ -909,7 +911,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
         
         if(re.search("altitudine: ", user_message, re.IGNORECASE)):
             value = re.split("altitudine: ", user_message, flags=re.IGNORECASE)[1]
-            altitudine=re.split(r'[,;\n]+',value)[0]
+            altitudine=re.split(r'[,;\n]+',value)[0].strip()
             if(not altitudine.isdigit()):
                 err = await update.message.reply_text("Errore: altitudine non valida. Riprova.")
                 context.user_data["eliminare"].append(err.message_id)
@@ -919,7 +921,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
             altitudine=""
         if(re.search("velocità: ", user_message, re.IGNORECASE)):
             value = re.split("velocità: ", user_message, flags=re.IGNORECASE)[1]
-            velocita=re.split(r'[,;\n]+',value)[0]
+            velocita=re.split(r'[,;\n]+',value)[0].strip()
             if(not velocita.isdigit()):
                 err = await update.message.reply_text("Errore: velocità non valida. Riprova.")
                 context.user_data["eliminare"].append(err.message_id)
@@ -932,7 +934,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
         if(re.search("città: ", user_message, re.IGNORECASE)):
             flag = bool(True)
             value = re.split("città: ", user_message, flags=re.IGNORECASE)[1]
-            citta=re.split(r'[,;\n]+',value)[0]
+            citta=re.split(r'[,;\n]+',value)[0].strip()
             if(not HelpersCazzi.valid_name(citta)):
                 err = await update.message.reply_text("Errore: città non valida (sono accettati solo lettere, spazi e trattini). Riprova.")
                 context.user_data["eliminare"].append(err.message_id)
@@ -941,7 +943,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
         if(re.search("fuso: ", user_message, re.IGNORECASE)):
             flag = bool(True)
             value = re.split("fuso: ", user_message, flags=re.IGNORECASE)[1]
-            fuso=re.split(r'[,;\n]+',value)[0]
+            fuso=re.split(r'[,;\n]+',value)[0].strip()
             if(not HelpersCazzi.is_integer(fuso)):
                 err = await update.message.reply_text("Errore: fuso non valido (deve essere un intero). Riprova.")
                 context.user_data["eliminare"].append(err.message_id)
@@ -952,7 +954,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
         if(re.search("stato: ", user_message, re.IGNORECASE)):
             flag = bool(True)
             value = re.split("stato: ", user_message, flags=re.IGNORECASE)[1]
-            stato=re.split(r'[,;\n]+',value)[0]
+            stato=re.split(r'[,;\n]+',value)[0].strip()
             if(not HelpersCazzi.valid_name(stato)):
                 err = await update.message.reply_text("Errore: stato non valido (sono accettati solo lettere, spazi e trattini). Riprova.")
                 context.user_data["eliminare"].append(err.message_id)
@@ -964,7 +966,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
         # assumo che nessuno metta il giorno senza mettere l'ora
         if(re.search("or[ae]: ", user_message, re.IGNORECASE)):
             value = re.split("or[ae]: ", user_message, flags=re.IGNORECASE)[1]
-            ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0])
+            ora=HelpersCazzi.valid_hour(re.split(r'[,;\n]+',value)[0].strip())
             if(not ora):
                 err = await update.message.reply_text("Errore: ora non valida. Riprova.")
                 context.user_data["eliminare"].append(err.message_id)
@@ -973,7 +975,7 @@ async def sudo_addcacca_conferma(update: Update, context: ContextTypes.DEFAULT_T
 
             if(re.search("giorno: ", user_message, re.IGNORECASE)):
                 value = re.split("giorno: ", user_message, flags=re.IGNORECASE)[1]
-                giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0])
+                giorno=HelpersCazzi.valid_day(re.split(r'[,;\n]+',value)[0].strip())
                 if(not giorno):
                     err = await update.message.reply_text("Errore: giorno non valido. Riprova.")
                     context.user_data["eliminare"].append(err.message_id)
